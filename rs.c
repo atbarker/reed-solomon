@@ -5,8 +5,11 @@
 	Platform: X86-64 (amd64)
 */
 
-package reedsolomon
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
 
+/*
 import (
 	"errors"
 	"sort"
@@ -14,16 +17,17 @@ import (
 
 	"github.com/templexxx/cpu"
 	xor "github.com/templexxx/xorsimd"
-)
+)*/
 
 // RS Reed-Solomon Codes receiver
-type RS struct {
-	DataCnt       int
-	ParityCnt     int
-	cpu           int
-	encodeMatrix  matrix // encoding_matrix
-	genMatrix     matrix // generator_matrix
-	cacheEnabled  bool   // cache inverse_matrix
+struct RS{
+	int DataCnt;
+	int ParityCnt;
+	int cpu;
+	uint8_t *encodeMatrix; // encoding_matrix
+	uint8_t *genMatrix; // generator_matrix
+	int cacheEnabled;   // cache inverse_matrix
+	//TODO no idea what this is
 	inverseMatrix *sync.Map
 }
 
@@ -55,61 +59,60 @@ func New(dataCnt, parityCnt int) (r *RS, err error) {
 	return
 }
 
-func getCPUFeature() int {
-	if useAVX512() {
-		return avx512
-	} else if cpu.X86.HasAVX2 {
-		return avx2
+int getCPUFeature(){
+	if (useAVX512()){
+		return avx512;
+	} else if (cpu.X86.HasAVX2) {
+		return avx2;
 	} else {
-		return base
+		return base;
 	}
 }
 
-func useAVX512() (ok bool) {
-	if !hasAVX512() {
-		return
+int useAVX512(){
+	int ok;
+	if (!hasAVX512()) {
+		return 0;
 	}
-	if !useAVX512() {
-		return
+	if (!useAVX512()) {
+		return 0;
 	}
-	return true
+	return 1;
 }
 
-func hasAVX512() (ok bool) {
-	if !cpu.X86.HasAVX512VL {
-		return
+int hasAVX512() (ok bool) {
+	if (!cpu.X86.HasAVX512VL) {
+		return 0;
 	}
-	if !cpu.X86.HasAVX512BW {
-		return
+	if (!cpu.X86.HasAVX512BW) {
+		return 0;
 	}
-	if !cpu.X86.HasAVX512F {
-		return
+	if (!cpu.X86.HasAVX512F) {
+		return 0;
 	}
-	if !cpu.X86.HasAVX512DQ {
-		return
+	if (!cpu.X86.HasAVX512DQ){
+		return 0;
 	}
-	return true
+	return 1;
 }
 
-var ErrMinVects = errors.New("data or parity <= 0")
-var ErrMaxVects = errors.New("data+parity >= 256")
 
-func checkCfg(d, p int) error {
-	if (d <= 0) || (p <= 0) {
-		return ErrMinVects
+int checkCfg(int d, int p){
+	if ((d <= 0) || (p <= 0)){
+		return -1;
 	}
-	if d+p >= 256 {
-		return ErrMaxVects
+	if (d+p >= 256){
+		return -1;
 	}
-	return nil
+	return 1;
 }
 
 // At most 35960 inverse_matrix (when data=28, parity=4)
-func (r *RS) enableCache() {
-	if r.DataCnt < 29 && r.ParityCnt < 5 { // data+parity can't be bigger than 64 (tips: see the codes about make inverse matrix)
-		r.cacheEnabled = true
+int enableCache(struct RS *r){
+	if (r.DataCnt < 29 && r.ParityCnt < 5){ // data+parity can't be bigger than 64 (tips: see the codes about make inverse matrix)
+		r.cacheEnabled = 1;
 	} else {
-		r.cacheEnabled = false
+		r.cacheEnabled = 0;
 	}
 }
 
