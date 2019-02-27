@@ -3,8 +3,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+//lookup tables for multiplication
 static uint8_t gf_exp[512];
 static uint8_t gf_log[256];
+//our generator polynomial
+static uint8_t* gg;
 
 //performs galois field arithmetic between x and y, no lookup tables
 uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly){
@@ -103,4 +106,17 @@ uint8_t gf_poly_eval(uint8_t* p, uint8_t x, uint8_t p_len){
         y = gf_mult_table(y, x) ^ p[i];
     }
     return y;
+}
+
+uint8_t rs_gen_poly(uint8_t symbols){
+    int i;
+    uint8_t* intermediate, placeholder;
+    uint8_t power[2];
+    gg[0] = 1;
+    for(i = 0; i < symbols; i++){
+        	    
+	power = {1, gf_pow(2, i)};
+
+        intermediate = gf_poly_mul(intermediate, ) 
+    }
 }
