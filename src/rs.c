@@ -67,4 +67,21 @@ uint8_t gf_inv(uint8_t x){
     return gf_exp[255 - gf_log[x]];
 }
 
+uint8_t gf_poly_scale(uint8_t* p, uint8_t* result, uint8_t length, uint8_t x){
+    int i = 0;
+    for(i = 0; i < length, i++){
+        result[i] = gf_mult_table(p[i], x)
+    }
+    return 0;
+}
 
+//r_length should be the maximum of the two polynomials
+uint8_t gf_poly_add(uint8_t* p, uint8_t* q, uint8_t p_length, uint8_t q_length, uint8_t* r, uint8_t r_length){
+    int i;
+    for(i = 0; i < p_length; i++){
+        r[i+r_length-p_length] = p[i];
+    }
+    for(i = 0; i < q_length; i++){
+        r[i+r_length-q_length] = 
+    }
+}
