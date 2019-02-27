@@ -6,6 +6,25 @@
 static uint8_t gf_exp[512];
 static uint8_t gf_log[256];
 
+//performs galois field arithmetic between x and y, no lookup tables
+uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly){
+    //uint8_t size = 256;
+    uint8_t r = 0;
+
+    while(y){
+        if(y & 1){
+            r = r ^ x;
+        }
+        y = y >> 1;
+        x = x << 1;
+        if((prim_poly > 0) && (x & 256)){
+            x = x ^ prim_poly;
+        }
+    }
+    
+    return r;
+}
+
 //populate our two lookup tables to speed up the process
 uint8_t init_tables(uint16_t prim_poly){
     uint8_t x = 1;
@@ -23,26 +42,6 @@ uint8_t init_tables(uint16_t prim_poly){
 
 uint8_t gf_add(uint8_t x, uint8_t y){
     return x ^ y;
-}
-
-
-//performs galois field arithmetic between x and y, no lookup tables
-uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly){
-    uint8_t size = 256;
-    uint8_t r = 0;
-
-    while(y){
-        if(y & 1){
-            r = r ^ x;
-        }
-        y = y >> 1;
-        x = x << 1;
-        if((prim_poly > 0) && (x & 256)){
-            x = x ^ prim_poly;
-        }
-    }
-    
-    return r;
 }
 
 uint8_t gf_mult_table(uint8_t x, uint8_t y){
@@ -69,8 +68,8 @@ uint8_t gf_inv(uint8_t x){
 
 uint8_t gf_poly_scale(uint8_t* p, uint8_t* result, uint8_t length, uint8_t x){
     int i = 0;
-    for(i = 0; i < length, i++){
-        result[i] = gf_mult_table(p[i], x)
+    for(i = 0; i < length; i++){
+        result[i] = gf_mult_table(p[i], x);
     }
     return 0;
 }
@@ -82,6 +81,26 @@ uint8_t gf_poly_add(uint8_t* p, uint8_t* q, uint8_t p_length, uint8_t q_length, 
         r[i+r_length-p_length] = p[i];
     }
     for(i = 0; i < q_length; i++){
-        r[i+r_length-q_length] = 
+        r[i+r_length-q_length] ^= q[i]; 
     }
+}
+
+uint8_t* gf_poly_mul(uint8_t* p, uint8_t* q, uint8_t p_len, uint8_t q_len){
+    uint8_t* r = malloc(p_len + q_len - 1);
+    int i, j;
+    for(i = 0; i < q_len; i++){
+        for(j = 0; j < p_len; j++){
+            r[i+j] ^= gf_mult_table(p[j], q[i]);
+	}
+    }
+    return r;
+}
+
+uint8_t gf_poly_eval(uint8_t* p, uint8_t x, uint8_t p_len){
+    uint8_t y = p[0];
+    int i;
+    for(i = 0; i < p_len; i++){
+        y = gf_mult_table(y, x) ^ p[i];
+    }
+    return y;
 }
