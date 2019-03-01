@@ -5,6 +5,8 @@
 #include <string.h>
 #include "polynomial.h"
 
+//NOTE all of this uses the primitive polynomial P(x) = x^8 + x^4 + x^3 + x^2 + 1 or in hex Ox11D
+
 //our generator polynomial
 static uint8_t* gg;
 
@@ -138,7 +140,7 @@ int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output){
     memset(output->byte_array, 0, output->size);
     for(j = 0; j < b->size; j++){
         for(i = 0; i < a->size; i++){
-            output->byte_array[i+j] = gf_mult_table(a->byte_array[i], b->byte_array[j]);
+            output->byte_array[i+j] ^= gf_mult_table(a->byte_array[i], b->byte_array[j]);
         }
     }
     return 0;

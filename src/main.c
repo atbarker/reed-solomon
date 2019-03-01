@@ -53,13 +53,34 @@ int test_galois_field(){
     gf_poly_scalar(a, output, 4);
     
     //polynomial addition
+    uint8_t result[5] = {65, 119, 0, 119, 65};
     gf_poly_add(a, b, output);
+    for(int i = 0; i < output->size; i++){
+        if(output->byte_array[i] != result[i]){
+            printf("Polynomial addition failed\n");
+	    return -1;
+	}
+    }
     
     //polynomial multiplication
+    uint8_t result_mul[9] = {64, 159, 165, 46, 0, 46, 165, 159, 64};
     gf_poly_mult(a, b, output);
+    for(int i = 0; i < output->size; i++){
+        if(output->byte_array[i] != result_mul[i]){
+            printf("Polynomial multiplication failed\n");
+            return -1;
+        }
+    }
     
     //polynomial division
+    uint8_t result_div[1] = {192};
     gf_poly_div(a, b, output);
+    for(int i = 0; i < output->size; i++){
+        if(output->byte_array[i] != result_div[i]){
+            printf("Polynomial division failed\n");
+            return -1;
+        }
+    }
     
     //polynomial evaluation
     uint8_t out = gf_poly_eval(a, 4);
