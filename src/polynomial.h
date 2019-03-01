@@ -10,19 +10,19 @@ typedef struct{
 
 
 //assumes an already malloc'd byte array to the desired length (max should be 256 so 8 bits is enough)
-uint32_t init(uint8_t size, uint8_t offset, uint8_t length, uint8_t* byte_array);
+Polynomial* init(uint8_t size, uint8_t offset, uint8_t length, uint8_t* byte_array);
 
 //append to an existing polynomial
-uint32_t append(Polynomial* p, uint8_t x);
+int32_t append(Polynomial* p, uint8_t x);
 
 //reset values to zero, really just zero the size, don't have to zero the memory
-uint32_t reset(Polynomial* p);
+int32_t reset(Polynomial* p);
 
 //set a polynomial to existing values
-uint32_t set(Polynomial* p, uint8_t byte_seq, uint8_t len, uint8_t offset);
+int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size, uint8_t offset);
 
 //make a copy of a polynomial
-uint32_t copy(Polynomial* src, Polynomial* dest);
+int32_t copy(Polynomial* src, Polynomial* dest);
 
 //return the length of the length of the byte array
 uint8_t length(Polynomial* p);
@@ -34,6 +34,6 @@ uint8_t size(Polynomial* p);
 uint8_t value_at(Polynomial* p, uint32_t i);
 
 //return pointer to byte array
-uint8_t mem(Polynomial* p);
+uint8_t* mem(Polynomial* p);
 
 #endif
