@@ -86,6 +86,9 @@ int test_galois_field(){
     uint8_t out = gf_poly_eval(a, 4);
     
     //creating the RS generator polynomial
+    output = rs_generator_poly(4);
+
+
     printf("All test pass\n");
     free_poly(a);
     free_poly(b);
