@@ -4,4 +4,4 @@ All:
 	gcc -g -c main.c
 	gcc -g -o main main.o rs.o
 clean:
-	`rm *.o main
+	rm *.o main
