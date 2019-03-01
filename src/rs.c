@@ -105,41 +105,22 @@ uint8_t gf_inv(uint8_t x){
     return gf_exp[255 - gf_log[x]];
 }
 
-uint8_t gf_poly_scale(uint8_t* p, uint8_t* result, uint8_t length, uint8_t x){
-    int i = 0;
-    for(i = 0; i < length; i++){
-        result[i] = gf_mult_table(p[i], x);
-    }
+int32_t gf_poly_scalar(Polynomial *p, Polynomial *output, uint8_t scalar){
     return 0;
 }
 
-//r_length should be the maximum of the two polynomials
-uint8_t gf_poly_add(uint8_t* p, uint8_t* q, uint8_t p_length, uint8_t q_length, uint8_t* r, uint8_t r_length){
-    int i;
-    for(i = 0; i < p_length; i++){
-        r[i+r_length-p_length] = p[i];
-    }
-    for(i = 0; i < q_length; i++){
-        r[i+r_length-q_length] ^= q[i]; 
-    }
+int32_t gf_poly_add(Polynomial *a, Polynomial *b, Polynomial *output){
+    return 0;
 }
 
-uint8_t* gf_poly_mul(uint8_t* p, uint8_t* q, uint8_t p_len, uint8_t q_len){
-    uint8_t* r = malloc(p_len + q_len - 1);
-    int i, j;
-    for(i = 0; i < q_len; i++){
-        for(j = 0; j < p_len; j++){
-            r[i+j] ^= gf_mult_table(p[j], q[i]);
-	}
-    }
-    return r;
+int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output){
+    return 0;
 }
 
-uint8_t gf_poly_eval(uint8_t* p, uint8_t x, uint8_t p_len){
-    uint8_t y = p[0];
-    int i;
-    for(i = 0; i < p_len; i++){
-        y = gf_mult_table(y, x) ^ p[i];
-    }
-    return y;
+int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output){
+    return 0;
+}
+
+uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
+    return 0;
 }
