@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "polynomial.h"
 
 //our generator polynomial
 static uint8_t* gg;
@@ -176,4 +177,35 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
         y = gf_mult_table(y, x) ^ p->byte_array[i];
     }
     return 0;
+}
+
+Polynomial* rs_generator_poly(uint8_t n_symbols){
+    int i = 0;
+    Polynomial *generator = malloc(sizeof(Polynomial));
+    Polynomial *mulp = malloc(sizeof(Polynomial));
+    Polynomial *temp = malloc(sizeof(Polynomial));
+
+    generator->byte_array = malloc(255);
+    mulp->byte_array = malloc(255);
+    temp->byte_array = malloc(255);
+
+    generator->length = 1;
+    generator->byte_array[0] = 1;
+    generator->size = 1;
+    mulp->size = 2;
+
+    for(i = 0; i < n_symbols; i++){
+        mulp->byte_array[0] = 1;
+	mulp->byte_array[1] = gf_pow(2, i);
+
+	gf_poly_mult(generator, mulp, temp);
+
+	poly_copy(temp, generator);
+    }
+    //TODO, make better cleanup and setup functions
+    free(mulp->byte_array);
+    free(temp->byte_array);
+    free(mulp);
+    free(temp);
+    return generator;
 }

@@ -29,7 +29,7 @@ int32_t reset(Polynomial* p);
 int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size, uint8_t offset);
 
 //make a copy of a polynomial
-int32_t copy(Polynomial* src, Polynomial* dest);
+int32_t poly_copy(Polynomial* src, Polynomial* dest);
 
 //return the length of the length of the byte array
 uint8_t length(Polynomial* p);

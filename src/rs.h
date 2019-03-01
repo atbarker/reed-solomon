@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include "polynomial.h"
 
+//The generator polynomial, only one instance of this
+static Polynomial* gen_poly;
+
 //tables for storing Galois field operation results, 2D arrays if requiring two operands, so 64KB each
 uint8_t gf_mul_table[256][256];
 uint8_t gf_inv_table[256];
@@ -23,6 +26,9 @@ int32_t gf_poly_add(Polynomial *a, Polynomial *b, Polynomial *output);
 int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output);
 int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output);
 uint8_t gf_poly_eval(Polynomial *p, uint8_t x);
+
+//Reed-Solomon functions
+Polynomial* rs_generator_poly(uint8_t n_symbols);
 
 
 #endif

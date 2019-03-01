@@ -43,7 +43,7 @@ int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size, uint8_t offset){
     }
 }
 
-int32_t copy(Polynomial* src, Polynomial* dest){
+int32_t poly_copy(Polynomial* src, Polynomial* dest){
     if(src && dest){
         dest->size = src->size;
 	dest->offset = src->offset;
