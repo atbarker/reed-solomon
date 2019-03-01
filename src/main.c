@@ -34,15 +34,35 @@ int test_galois_field(){
     Polynomial* a = new_poly();
     Polynomial* b = new_poly();
 
+    a->byte_array[0] = 0x01;
+    a->byte_array[1] = 0x0f;
+    a->byte_array[2] = 0x36;
+    a->byte_array[3] = 0x78;
+    a->byte_array[4] = 0x40;
+    a->size = 5;
+
+    b->byte_array[0] = 0x40;
+    b->byte_array[1] = 0x78;
+    b->byte_array[2] = 0x36;
+    b->byte_array[3] = 0x0f;
+    b->byte_array[4] = 0x01;
+    b->size = 5;
+
     //test polynomial scalar multiplication
+    Polynomial *output = new_poly();
+    gf_poly_scalar(a, output, 4);
     
     //polynomial addition
+    gf_poly_add(a, b, output);
     
     //polynomial multiplication
+    gf_poly_mult(a, b, output);
     
     //polynomial division
+    gf_poly_div(a, b, output);
     
     //polynomial evaluation
+    uint8_t out = gf_poly_eval(a, 4);
     
     //creating the RS generator polynomial
     printf("All test pass\n");
