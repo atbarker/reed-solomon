@@ -2,6 +2,7 @@
 #include "rs.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 //our generator polynomial
 static uint8_t* gg;
@@ -106,21 +107,73 @@ uint8_t gf_inv(uint8_t x){
 }
 
 int32_t gf_poly_scalar(Polynomial *p, Polynomial *output, uint8_t scalar){
+    int i;
+    output->size = p->size;
+    for(i = 0; i < p->length; i++){
+        output->byte_array[i] = gf_mult_table(p->byte_array[i], scalar);
+    }
     return 0;
 }
 
 int32_t gf_poly_add(Polynomial *a, Polynomial *b, Polynomial *output){
+    int i;
+
+    output->size = poly_max(a->size, b->size);
+    memset(output->byte_array, 0, output->size);
+
+    for(i = 0; i < a->size; i++){
+        output->byte_array[i + output->size - a->size] = a->byte_array[i];
+    }
+
+    for(i = 0; i < b->size; i++){
+        output->byte_array[i + output->size - b->size] ^= b->byte_array[i];
+    }
     return 0;
 }
 
 int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output){
+    int i, j;
+    output->size = a->size + b->size - 1;
+    memset(output->byte_array, 0, output->size);
+    for(j = 0; j < b->size; j++){
+        for(i = 0; i < a->size; i++){
+            output->byte_array[i+j] = gf_mult_table(a->byte_array[i], b->byte_array[j]);
+        }
+    }
     return 0;
 }
 
 int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output){
+    uint8_t coef;
+    int i, j;
+    size_t sep;
+    if(a != output){
+        memcpy(output, a, a->size);
+    }
+
+    output->size = a->size;
+
+    for(i = 0; i < (a->size - (b->size -1)); i++){
+        coef = output->byte_array[i];
+	for(j = 0; j < b->size; j++){
+            if(b->byte_array[j] != 0){
+                output->byte_array[i+j] ^= gf_mult_table(b->byte_array[j], coef);
+            }
+        }
+    }
+
+    sep = a->size -(b->size -1);
+    memmove(output, output+sep, (output->size - sep));
+    output->size = output->size - sep;
+    
     return 0;
 }
 
 uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
+    int i;
+    uint8_t y = p->byte_array[0];
+    for(i = 0; i < p->size; i++){
+        y = gf_mult_table(y, x) ^ p->byte_array[i];
+    }
     return 0;
 }

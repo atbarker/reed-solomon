@@ -1,6 +1,13 @@
 #ifndef POLY_H
 #define POLY_H
 
+#include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+//get a maximum value for calculating lengths
+#define poly_max(a, b) ((a > b) ? (a) : (b))
+
 typedef struct{
     int size; //size of the polynomial
     int offset; //offset
