@@ -181,13 +181,9 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
 
 Polynomial* rs_generator_poly(uint8_t n_symbols){
     int i = 0;
-    Polynomial *generator = malloc(sizeof(Polynomial));
-    Polynomial *mulp = malloc(sizeof(Polynomial));
-    Polynomial *temp = malloc(sizeof(Polynomial));
-
-    generator->byte_array = malloc(255);
-    mulp->byte_array = malloc(255);
-    temp->byte_array = malloc(255);
+    Polynomial *generator = new_poly();
+    Polynomial *mulp = new_poly();
+    Polynomial *temp = new_poly();
 
     generator->byte_array[0] = 1;
     generator->size = 1;
@@ -201,10 +197,7 @@ Polynomial* rs_generator_poly(uint8_t n_symbols){
 
 	poly_copy(temp, generator);
     }
-    //TODO, make better cleanup and setup functions
-    free(mulp->byte_array);
-    free(temp->byte_array);
-    free(mulp);
-    free(temp);
+    free_poly(mulp);
+    free_poly(temp);
     return generator;
 }
