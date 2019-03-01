@@ -110,7 +110,7 @@ uint8_t gf_inv(uint8_t x){
 int32_t gf_poly_scalar(Polynomial *p, Polynomial *output, uint8_t scalar){
     int i;
     output->size = p->size;
-    for(i = 0; i < p->length; i++){
+    for(i = 0; i < p->size; i++){
         output->byte_array[i] = gf_mult_table(p->byte_array[i], scalar);
     }
     return 0;
@@ -189,7 +189,6 @@ Polynomial* rs_generator_poly(uint8_t n_symbols){
     mulp->byte_array = malloc(255);
     temp->byte_array = malloc(255);
 
-    generator->length = 1;
     generator->byte_array[0] = 1;
     generator->size = 1;
     mulp->size = 2;

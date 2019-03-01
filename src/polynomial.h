@@ -10,14 +10,19 @@
 
 typedef struct{
     int size; //size of the polynomial
-    int offset; //offset
-    int length; //length of the byte array
+    int array_length; //length of the byte array
     uint8_t* byte_array; //actual storage of the byte array for the polynomial
 } Polynomial;
 
 
 //assumes an already malloc'd byte array to the desired length (max should be 256 so 8 bits is enough)
-Polynomial* init(uint8_t size, uint8_t offset, uint8_t length, uint8_t* byte_array);
+Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array);
+
+//a new empty polynomial
+Polynomial* new_poly(void);
+
+//free memory allocated for a polynomial
+void free_poly(Polynomial *p);
 
 //append to an existing polynomial
 int32_t append(Polynomial* p, uint8_t x);
@@ -26,7 +31,7 @@ int32_t append(Polynomial* p, uint8_t x);
 int32_t reset(Polynomial* p);
 
 //set a polynomial to existing values
-int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size, uint8_t offset);
+int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size);
 
 //make a copy of a polynomial
 int32_t poly_copy(Polynomial* src, Polynomial* dest);
