@@ -48,4 +48,6 @@ uint8_t value_at(Polynomial* p, uint32_t i);
 //return pointer to byte array
 uint8_t* mem(Polynomial* p);
 
+void print_polynomial(Polynomial* p);
+
 #endif

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "polynomial.h"
 
@@ -82,4 +83,14 @@ uint8_t value_at(Polynomial* p, uint32_t i){
 
 uint8_t* mem(Polynomial* p){
     return p->byte_array;
+}
+
+void print_polynomial(Polynomial* p){
+    int i;
+    printf("Polynomial size: %d\n", p->size);
+    printf("[");
+    for(i = 0; i < p->size; i++){
+        printf(" %d, ", p->byte_array[i]);
+    }
+    printf("]\n");
 }
