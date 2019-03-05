@@ -232,3 +232,14 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
     free_poly(input);
     free_poly(output);
 }
+
+Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
+    Polynomial *syndromes = new_poly();
+    int i;
+    syndromes->size = parity_length + 1;
+    syndromes->byte_array[0] = 0;
+    for(i = 0; i < parity_length + 1; i++){
+        syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i));
+    }
+    return syndromes;
+}
