@@ -29,7 +29,9 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x);
 
 //Reed-Solomon functions
 Polynomial* rs_generator_poly(uint8_t n_symbols);
-Polynomial* encode(void);
+//make sure that the two arrays are already allocated
+void Encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
+
 Polynomial* calc_syndromes(Polynomial* message);
 Polynomial* FindErrataLocator(Polynomial* epos);
 Polynomial* FindErrorEvaluator(Polynomial* synd, Polynomial* errata_loc, Polynomial *dst, uint8_t ecclen);

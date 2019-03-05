@@ -1,4 +1,4 @@
-
+#include <assert.h>
 #include "rs.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -202,4 +202,33 @@ Polynomial* rs_generator_poly(uint8_t n_symbols){
     free_poly(mulp);
     free_poly(temp);
     return generator;
+}
+
+//input and output buffers are assumed to be populated
+void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length){
+    Polynomial *input, *output;
+    int i, j;
+    //temporary variable for encoding
+    uint8_t coef = 0;
+
+    //make sure we are in our block size limit for GF(2^8)
+    assert(data_length + parity_length < 256);
+    input = new_poly();
+    set(input, (uint8_t*) data, data_length);
+    output = new_poly();
+    set(output, (uint8_t*) parity, parity_length);
+    
+    for(i = 0; i < data_length; i++){
+        coef = input->byte_array[i];
+	if(coef != 0){
+            for(j = 0; j < gen_poly->size; j++){
+                output->byte_array[i+j] ^= gf_mult_table(gen_poly->byte_array[j], coef);
+	    }
+	}
+    }
+
+    memcpy(parity, output->byte_array, parity_length);
+
+    free_poly(input);
+    free_poly(output);
 }
