@@ -243,3 +243,35 @@ Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     }
     return syndromes;
 }
+
+Polynomial* find_errata_locator(Polynomial *error_positions){
+    Polynomial *errata_loc, *mulp, *addp, *apol, *temp;
+    int i;
+
+    errata_loc = new_poly();
+    addp = new_poly();
+    mulp = new_poly();
+    temp = new_poly();
+    errata_loc->size = 1;
+    errata_loc->byte_array[0] = 1;
+    mulp->size = 1;
+    addp->size = 2;
+
+    for(i = 0; i < error_positions->size; i++){
+        mulp->byte_array[0] = 1;
+	addp->byte_array[0] = gf_pow(2, error_positions->byte_array[i]);
+	addp->byte_array[1] = 0;
+
+	gf_poly_add(mulp, addp, apol);
+	gf_poly_mult(errata_loc, apol, temp);
+
+	poly_copy(temp, errata_loc);
+    }
+
+    free_poly(addp);
+    free_poly(mulp);
+    free_poly(apol);
+    free_poly(temp);
+}
+
+

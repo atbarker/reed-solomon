@@ -32,8 +32,8 @@ Polynomial* rs_generator_poly(uint8_t n_symbols);
 //make sure that the two arrays are already allocated
 void Encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
 
-Polynomial* calc_syndromes(Polynomial* message);
-Polynomial* FindErrataLocator(Polynomial* epos);
+Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length);
+Polynomial* find_errata_locator(Polynomial* error_positions);
 Polynomial* FindErrorEvaluator(Polynomial* synd, Polynomial* errata_loc, Polynomial *dst, uint8_t ecclen);
 Polynomial* CorrectErrata(Polynomial* syn, Polynomial* err_pos, Polynomial* msg);
 
