@@ -1,481 +1,409 @@
-/*
-	Reed-Solomon Codes over GF(2^8)
-	Primitive Polynomial:  x^8+x^4+x^3+x^2+1
-	Galois Filed arithmetic using Intel SIMD instructions (AVX2)
-	Platform: X86-64 (amd64)
+/*             rs.c        */
+/* This program is an encoder/decoder for Reed-Solomon codes. Encoding is in
+   systematic form, decoding via the Berlekamp iterative algorithm.
+   In the present form , the constants mm, nn, tt, and kk=nn-2tt must be
+   specified  (the double letters are used simply to avoid clashes with
+   other n,k,t used in other programs into which this was incorporated!)
+   Also, the irreducible polynomial used to generate GF(2**mm) must also be
+   entered -- these can be found in Lin and Costello, and also Clark and Cain.
+
+   The representation of the elements of GF(2**m) is either in index form,
+   where the number is the power of the primitive element alpha, which is
+   convenient for multiplication (add the powers modulo 2**m-1) or in
+   polynomial form, where the bits represent the coefficients of the
+   polynomial representation of the number, which is the most convenient form
+   for addition.  The two forms are swapped between via lookup tables.
+   This leads to fairly messy looking expressions, but unfortunately, there
+   is no easy alternative when working with Galois arithmetic.
+
+   The code is not written in the most elegant way, but to the best
+   of my knowledge, (no absolute guarantees!), it works.
+   However, when including it into a simulation program, you may want to do
+   some conversion of global variables (used here because I am lazy!) to
+   local variables where appropriate, and passing parameters (eg array
+   addresses) to the functions  may be a sensible move to reduce the number
+   of global variables and thus decrease the chance of a bug being introduced.
+
+   This program does not handle erasures at present, but should not be hard
+   to adapt to do this, as it is just an adjustment to the Berlekamp-Massey
+   algorithm. It also does not attempt to decode past the BCH bound -- see
+   Blahut "Theory and practice of error control codes" for how to do this.
+
+              Simon Rockliff, University of Adelaide   21/9/89
+
+   26/6/91 Slight modifications to remove a compiler dependent bug which hadn't
+           previously surfaced. A few extra comments added for clarity.
+           Appears to all work fine, ready for posting to net!
+
+                  Notice
+                 --------
+   This program may be freely modified and/or given to whoever wants it.
+   A condition of such distribution is that the author's contribution be
+   acknowledged by his name being left in the comments heading the program,
+   however no responsibility is accepted for any financial or other loss which
+   may result from some unforseen errors or malfunctioning of the program
+   during use.
+                                 Simon Rockliff, 26th June 1991
 */
 
-#include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
-#include <stdint.h>
+#define mm  4           /* RS code over GF(2**4) - change to suit */
+#define nn  15          /* nn=2**mm -1   length of codeword */
+#define tt  3           /* number of errors that can be corrected */
+#define kk  9           /* kk = nn-2*tt  */
 
-/*
-import (
-	"errors"
-	"sort"
-	"sync"
-
-	"github.com/templexxx/cpu"
-	xor "github.com/templexxx/xorsimd"
-)*/
-
-// RS Reed-Solomon Codes receiver
-struct RS{
-	int DataCnt;
-	int ParityCnt;
-	int cpu;
-	uint8_t *encodeMatrix; // encoding_matrix
-	uint8_t *genMatrix; // generator_matrix
-	int cacheEnabled;   // cache inverse_matrix
-	//TODO no idea what this is
-	inverseMatrix *sync.Map
-}
-
-// CPU Features
-const (
-	base = iota
-	avx2
-	avx512
-)
-
-var EnableAVX512 = false
-
-// New create an RS
-func New(dataCnt, parityCnt int) (r *RS, err error) {
-
-	err = checkCfg(dataCnt, parityCnt)
-	if err != nil {
-		return
-	}
-
-	e := genEncMatrix(dataCnt, parityCnt)
-	g := e[dataCnt*dataCnt:]
-	r = &RS{DataCnt: dataCnt, ParityCnt: parityCnt,
-		encodeMatrix: e, genMatrix: g, inverseMatrix: new(sync.Map)}
-	r.enableCache()
-
-	r.cpu = getCPUFeature()
-
-	return
-}
-
-int getCPUFeature(){
-	if (useAVX512()){
-		return avx512;
-	} else if (cpu.X86.HasAVX2) {
-		return avx2;
-	} else {
-		return base;
-	}
-}
-
-int useAVX512(){
-	int ok;
-	if (!hasAVX512()) {
-		return 0;
-	}
-	if (!useAVX512()) {
-		return 0;
-	}
-	return 1;
-}
-
-int hasAVX512() (ok bool) {
-	if (!cpu.X86.HasAVX512VL) {
-		return 0;
-	}
-	if (!cpu.X86.HasAVX512BW) {
-		return 0;
-	}
-	if (!cpu.X86.HasAVX512F) {
-		return 0;
-	}
-	if (!cpu.X86.HasAVX512DQ){
-		return 0;
-	}
-	return 1;
-}
+int pp [mm+1] = { 1, 1, 0, 0, 1} ; /* specify irreducible polynomial coeffts */
+int alpha_to [nn+1], index_of [nn+1], gg [nn-kk+1] ;
+int recd [nn], data [kk], bb [nn-kk] ;
 
 
-int checkCfg(int d, int p){
-	if ((d <= 0) || (p <= 0)){
-		return -1;
-	}
-	if (d+p >= 256){
-		return -1;
-	}
-	return 1;
-}
+void generate_gf()
+/* generate GF(2**mm) from the irreducible polynomial p(X) in pp[0]..pp[mm]
+   lookup tables:  index->polynomial form   alpha_to[] contains j=alpha**i;
+                   polynomial form -> index form  index_of[j=alpha**i] = i
+   alpha=2 is the primitive element of GF(2**mm)
+*/
+ {
+   register int i, mask ;
 
-// At most 35960 inverse_matrix (when data=28, parity=4)
-int enableCache(struct RS *r){
-	if (r.DataCnt < 29 && r.ParityCnt < 5){ // data+parity can't be bigger than 64 (tips: see the codes about make inverse matrix)
-		r.cacheEnabled = 1;
-	} else {
-		r.cacheEnabled = 0;
-	}
-}
+  mask = 1 ;
+  alpha_to[mm] = 0 ;
+  for (i=0; i<mm; i++)
+   { alpha_to[i] = mask ;
+     index_of[alpha_to[i]] = i ;
+     if (pp[i]!=0)
+       alpha_to[mm] ^= mask ;
+     mask <<= 1 ;
+   }
+  index_of[alpha_to[mm]] = mm ;
+  mask >>= 1 ;
+  for (i=mm+1; i<nn; i++)
+   { if (alpha_to[i-1] >= mask)
+        alpha_to[i] = alpha_to[mm] ^ ((alpha_to[i-1]^mask)<<1) ;
+     else alpha_to[i] = alpha_to[i-1]<<1 ;
+     index_of[alpha_to[i]] = i ;
+   }
+  index_of[0] = -1 ;
+ }
 
-// Encode outputs parity into vects
-func (r *RS) Encode(vects [][]byte) (err error) {
-	err = r.checkEncode(vects)
-	if err != nil {
-		return
-	}
-	r.encode(vects, false)
-	return
-}
 
-var ErrVectCnt = errors.New("vects != data + parity")
-var ErrVectSizeZero = errors.New("vect size cannot equal 0")
-var ErrVectSizeMismatch = errors.New("vects size mismatch")
+void gen_poly()
+/* Obtain the generator polynomial of the tt-error correcting, length
+  nn=(2**mm -1) Reed Solomon code  from the product of (X+alpha**i), i=1..2*tt
+*/
+ {
+   register int i,j ;
 
-func (r *RS) checkEncode(vects [][]byte) (err error) {
-	rows := len(vects)
-	if r.DataCnt+r.ParityCnt != rows {
-		err = ErrVectCnt
-		return
-	}
-	size := len(vects[0])
-	if size == 0 {
-		err = ErrVectSizeZero
-		return
-	}
-	for i := 1; i < rows; i++ {
-		if len(vects[i]) != size {
-			err = ErrVectSizeMismatch
-			return
-		}
-	}
-	return
-}
+   gg[0] = 2 ;    /* primitive element alpha = 2  for GF(2**mm)  */
+   gg[1] = 1 ;    /* g(x) = (X+alpha) initially */
+   for (i=2; i<=nn-kk; i++)
+    { gg[i] = 1 ;
+      for (j=i-1; j>0; j--)
+        if (gg[j] != 0)  gg[j] = gg[j-1]^ alpha_to[(index_of[gg[j]]+i)%nn] ;
+        else gg[j] = gg[j-1] ;
+      gg[0] = alpha_to[(index_of[gg[0]]+i)%nn] ;     /* gg[0] can never be zero */
+    }
+   /* convert gg[] to index form for quicker encoding */
+   for (i=0; i<=nn-kk; i++){  
+	   gg[i] = index_of[gg[i]]; 
+	   printf("%d\n", gg[i]);
+   }
+ }
 
-func (r *RS) encode(vects [][]byte, updateOnly bool) {
-	dv, pv := vects[:r.DataCnt], vects[r.DataCnt:]
-	size := len(vects[0])
-	splitSize := getSplitSize(size)
-	start := 0
-	for start < size {
-		end := start + splitSize
-		if end <= size {
-			r.encodePart(start, end, dv, pv, updateOnly)
-			start = end
-		} else {
-			r.encodePart(start, size, dv, pv, updateOnly) // calculate left_data (< splitSize)
-			start = size
-		}
-	}
-}
 
-const L1DataCacheSize = 32 * 1024
+void encode_rs()
+/* take the string of symbols in data[i], i=0..(k-1) and encode systematically
+   to produce 2*tt parity symbols in bb[0]..bb[2*tt-1]
+   data[] is input and bb[] is output in polynomial form.
+   Encoding is done by using a feedback shift register with appropriate
+   connections specified by the elements of gg[], which was generated above.
+   Codeword is   c(X) = data(X)*X**(nn-kk)+ b(X)          */
+ {
+   register int i,j ;
+   int feedback ;
 
-// split vects for cache-friendly (size must be divisible by 16)
-func getSplitSize(n int) int {
-	if n < 16 {
-		return 16
-	}
-	if n < L1DataCacheSize/2 {
-		return (n >> 4) << 4
-	}
-	return L1DataCacheSize / 2
-}
+   for (i=0; i<nn-kk; i++)   bb[i] = 0 ;
+   for (i=kk-1; i>=0; i--)
+    {  feedback = index_of[data[i]^bb[nn-kk-1]] ;
+       if (feedback != -1)
+        { for (j=nn-kk-1; j>0; j--)
+            if (gg[j] != -1)
+              bb[j] = bb[j-1]^alpha_to[(gg[j]+feedback)%nn] ;
+            else
+              bb[j] = bb[j-1] ;
+          bb[0] = alpha_to[(gg[0]+feedback)%nn] ;
+        }
+       else
+        { for (j=nn-kk-1; j>0; j--)
+            bb[j] = bb[j-1] ;
+          bb[0] = 0 ;
+        } ;
+    } ;
+ } ;
 
-// encode data[i][start:end]
-func (r *RS) encodePart(start, end int, dataVects, parityVects [][]byte, updateOnly bool) {
-	undoneSize := end - start
-	splitSize := (undoneSize >> 4) << 4 // splitSize could be 0(when undoneSize < 16)
-	d, p, g, cF := r.DataCnt, r.ParityCnt, r.genMatrix, r.cpu
-	if splitSize >= 16 {
-		end2 := start + splitSize
-		for i := 0; i < d; i++ {
-			for j := 0; j < p; j++ {
-				if i != 0 || updateOnly == true {
-					coeffMulVectUpdate(g[j*d+i], dataVects[i][start:end2], parityVects[j][start:end2], cF)
-				} else {
-					coeffMulVect(g[j*d+i], dataVects[0][start:end2], parityVects[j][start:end2], cF)
-				}
-			}
-		}
-	}
-	if undoneSize > splitSize { // 0 < undoneSize-splitSize < 16
-		for i := 0; i < d; i++ {
-			for j := 0; j < p; j++ {
-				if i != 0 || updateOnly == true {
-					coeffMulVectUpdateBase(g[j*d+i], dataVects[i][start:end], parityVects[j][start:end])
-				} else {
-					coeffMulVectBase(g[j*d], dataVects[0][start:end], parityVects[j][start:end])
-				}
-			}
-		}
-	}
-}
 
-func coeffMulVectBase(c byte, d, p []byte) {
-	t := mulTbl[c]
-	for i := 0; i < len(d); i++ {
-		p[i] = t[d[i]]
-	}
-}
 
-func coeffMulVectUpdateBase(c byte, d, p []byte) {
-	t := mulTbl[c]
-	for i := 0; i < len(d); i++ {
-		p[i] ^= t[d[i]]
-	}
-}
+void decode_rs()
+/* assume we have received bits grouped into mm-bit symbols in recd[i],
+   i=0..(nn-1),  and recd[i] is index form (ie as powers of alpha).
+   We first compute the 2*tt syndromes by substituting alpha**i into rec(X) and
+   evaluating, storing the syndromes in s[i], i=1..2tt (leave s[0] zero) .
+   Then we use the Berlekamp iteration to find the error location polynomial
+   elp[i].   If the degree of the elp is >tt, we cannot correct all the errors
+   and hence just put out the information symbols uncorrected. If the degree of
+   elp is <=tt, we substitute alpha**i , i=1..n into the elp to get the roots,
+   hence the inverse roots, the error location numbers. If the number of errors
+   located does not equal the degree of the elp, we have more than tt errors
+   and cannot correct them.  Otherwise, we then solve for the error value at
+   the error location and correct the error.  The procedure is that found in
+   Lin and Costello. For the cases where the number of errors is known to be too
+   large to correct, the information symbols as received are output (the
+   advantage of systematic encoding is that hopefully some of the information
+   symbols will be okay and that if we are in luck, the errors are in the
+   parity part of the transmitted codeword).  Of course, these insoluble cases
+   can be returned as error flags to the calling routine if desired.   */
+ {
+   register int i,j,u,q ;
+   int elp[nn-kk+2][nn-kk], d[nn-kk+2], l[nn-kk+2], u_lu[nn-kk+2], s[nn-kk+1] ;
+   int count=0, syn_error=0, root[tt], loc[tt], z[tt+1], err[nn], reg[tt+1] ;
 
-var ErrMismatchParityCnt = errors.New("mismatch parity cnt")
-var ErrIllegalUpdateSize = errors.New("illegal update size")
-var ErrIllegalUpdateRow = errors.New("illegal update row")
+/* first form the syndromes */
+   for (i=1; i<=nn-kk; i++)
+    { s[i] = 0 ;
+      for (j=0; j<nn; j++)
+        if (recd[j]!=-1)
+          s[i] ^= alpha_to[(recd[j]+i*j)%nn] ;      /* recd[j] in index form */
+/* convert syndrome from polynomial form to index form  */
+      if (s[i]!=0)  syn_error=1 ;        /* set flag if non-zero syndrome => error */
+      s[i] = index_of[s[i]] ;
+    } ;
 
-// UpdateParity update parity_data when one data_vect changes
-func (r *RS) Update(oldData []byte, newData []byte, updateRow int, parity [][]byte) (err error) {
-	// check args
-	if len(parity) != r.ParityCnt {
-		err = ErrMismatchParityCnt
-		return
-	}
-	size := len(newData)
-	if size <= 0 {
-		err = ErrIllegalUpdateSize
-		return
-	}
-	if size != len(oldData) {
-		err = ErrIllegalUpdateSize
-		return
-	}
-	for i := range parity {
-		if len(parity[i]) != size {
-			err = ErrIllegalUpdateSize
-			return
-		}
-	}
-	if updateRow >= r.DataCnt {
-		err = ErrIllegalUpdateRow
-		return
-	}
+   if (syn_error)       /* if errors, try and correct */
+    {
+/* compute the error location polynomial via the Berlekamp iterative algorithm,
+   following the terminology of Lin and Costello :   d[u] is the 'mu'th
+   discrepancy, where u='mu'+1 and 'mu' (the Greek letter!) is the step number
+   ranging from -1 to 2*tt (see L&C),  l[u] is the
+   degree of the elp at that step, and u_l[u] is the difference between the
+   step number and the degree of the elp.
+*/
+/* initialise table entries */
+      d[0] = 0 ;           /* index form */
+      d[1] = s[1] ;        /* index form */
+      elp[0][0] = 0 ;      /* index form */
+      elp[1][0] = 1 ;      /* polynomial form */
+      for (i=1; i<nn-kk; i++)
+        { elp[0][i] = -1 ;   /* index form */
+          elp[1][i] = 0 ;   /* polynomial form */
+        }
+      l[0] = 0 ;
+      l[1] = 0 ;
+      u_lu[0] = -1 ;
+      u_lu[1] = 0 ;
+      u = 0 ;
 
-	// step1: buf (old_data xor new_data)
-	buf := make([]byte, size)
-	xor.Encode(buf, [][]byte{oldData, newData})
-	// step2: reEnc parity
-	updateVects := make([][]byte, 1+r.ParityCnt)
-	updateVects[0] = buf
-	updateGenMatrix := make([]byte, r.ParityCnt)
-	// make update_generator_matrix & update_vects
-	for i := 0; i < r.ParityCnt; i++ {
-		col := updateRow
-		off := i*r.DataCnt + col
-		c := r.genMatrix[off]
-		updateGenMatrix[i] = c
-		updateVects[i+1] = parity[i]
-	}
-	updateRS := &RS{DataCnt: 1, ParityCnt: r.ParityCnt, genMatrix: updateGenMatrix, cpu: r.cpu}
-	updateRS.encode(updateVects, true)
-	return nil
-}
+      do
+      {
+        u++ ;
+        if (d[u]==-1)
+          { l[u+1] = l[u] ;
+            for (i=0; i<=l[u]; i++)
+             {  elp[u+1][i] = elp[u][i] ;
+                elp[u][i] = index_of[elp[u][i]] ;
+             }
+          }
+        else
+/* search for words with greatest u_lu[q] for which d[q]!=0 */
+          { q = u-1 ;
+            while ((d[q]==-1) && (q>0)) q-- ;
+/* have found first non-zero d[q]  */
+            if (q>0)
+             { j=q ;
+               do
+               { j-- ;
+                 if ((d[j]!=-1) && (u_lu[q]<u_lu[j]))
+                   q = j ;
+               }while (j>0) ;
+             } ;
 
-// Reconst repair missing vects, len(dpHas) == dataCnt
-// e.g:
-// in 3+2, the whole index: [0,1,2,3,4]
-// if vects[0,4] are lost & they need to be reconst
-// the "dpHas" will be [1,2,3] ,and you must be sure that vects[1] vects[2] vects[3] have correct data
-// results will be put into vects[0]&vects[4]
-// dataOnly: only reconst data or not
-func (r *RS) Reconst(vects [][]byte, dpHas, needReconst []int) (err error) {
-	err = r.checkReconst(dpHas, needReconst)
-	if err != nil {
-		if err == ErrNoNeedReconst {
-			return nil
-		}
-		return
-	}
-	sort.Ints(dpHas)
-	// make sure we have right data vects for reconst parity
-	for i := 0; i < r.DataCnt; i++ {
-		if !isIn(i, dpHas) && !isIn(i, needReconst) {
-			needReconst = append(needReconst, i)
-		}
-	}
-	dNeedReconst, pNeedReconst := SplitNeedReconst(r.DataCnt, needReconst)
-	if len(dNeedReconst) != 0 {
-		err = r.reconstData(vects, dpHas, dNeedReconst)
-		if err != nil {
-			return
-		}
-	}
-	if len(pNeedReconst) != 0 {
-		err = r.reconstParity(vects, pNeedReconst)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
+/* have now found q such that d[u]!=0 and u_lu[q] is maximum */
+/* store degree of new elp polynomial */
+            if (l[u]>l[q]+u-q)  l[u+1] = l[u] ;
+            else  l[u+1] = l[q]+u-q ;
 
-func (r *RS) reconstData(vects [][]byte, dpHas, dNeedReconst []int) (err error) {
-	d := r.DataCnt
-	lostCnt := len(dNeedReconst)
-	vTmp := make([][]byte, d+lostCnt)
-	for i, row := range dpHas {
-		vTmp[i] = vects[row]
-	}
-	for i, row := range dNeedReconst {
-		vTmp[i+d] = vects[row]
-	}
-	g, err := r.getGenMatrix(dpHas, dNeedReconst)
-	if err != nil {
-		return
-	}
-	rTmp := &RS{DataCnt: d, ParityCnt: lostCnt, genMatrix: g, cpu: r.cpu}
-	err = rTmp.Encode(vTmp)
-	if err != nil {
-		return
-	}
-	return
-}
+/* form new elp(x) */
+            for (i=0; i<nn-kk; i++)    elp[u+1][i] = 0 ;
+            for (i=0; i<=l[q]; i++)
+              if (elp[q][i]!=-1)
+                elp[u+1][i+u-q] = alpha_to[(d[u]+nn-d[q]+elp[q][i])%nn] ;
+            for (i=0; i<=l[u]; i++)
+              { elp[u+1][i] ^= elp[u][i] ;
+                elp[u][i] = index_of[elp[u][i]] ;  /*convert old elp value to index*/
+              }
+          }
+        u_lu[u+1] = u-l[u+1] ;
 
-func (r *RS) reconstParity(vects [][]byte, lost []int) (err error) {
-	d := r.DataCnt
-	lostCnt := len(lost)
-	vTmp := make([][]byte, d+lostCnt)
-	g := make([]byte, lostCnt*d)
-	for i, l := range lost {
-		copy(g[i*d:i*d+d], r.encodeMatrix[l*d:l*d+d])
-	}
-	for i := 0; i < d; i++ {
-		vTmp[i] = vects[i]
-	}
-	for i, p := range lost {
-		vTmp[i+d] = vects[p]
-	}
-	rTmp := &RS{DataCnt: d, ParityCnt: lostCnt, genMatrix: g, cpu: r.cpu}
-	err = rTmp.Encode(vTmp)
-	if err != nil {
-		return
-	}
-	return
-}
+/* form (u+1)th discrepancy */
+        if (u<nn-kk)    /* no discrepancy computed on last iteration */
+          {
+            if (s[u+1]!=-1)
+                   d[u+1] = alpha_to[s[u+1]] ;
+            else
+              d[u+1] = 0 ;
+            for (i=1; i<=l[u+1]; i++)
+              if ((s[u+1-i]!=-1) && (elp[u+1][i]!=0))
+                d[u+1] ^= alpha_to[(s[u+1-i]+index_of[elp[u+1][i]])%nn] ;
+            d[u+1] = index_of[d[u+1]] ;    /* put d[u+1] into index form */
+          }
+      } while ((u<nn-kk) && (l[u+1]<=tt)) ;
 
-var ErrNoNeedReconst = errors.New("no need reconst")
-var ErrTooManyLost = errors.New("too many lost vects")
-var ErrDPHasMismatchDataCnt = errors.New("len(dpHas) must = dataCnt")
-var ErrIllegalIndex = errors.New("illegal index")
-var ErrHasLostConflict = errors.New("dpHas&lost are conflicting")
+      u++ ;
+      if (l[u]<=tt)         /* can correct error */
+       {
+/* put elp into index form */
+         for (i=0; i<=l[u]; i++)   elp[u][i] = index_of[elp[u][i]] ;
 
-func (r *RS) checkReconst(dpHas, needReconst []int) (err error) {
-	d, p := r.DataCnt, r.ParityCnt
-	if len(needReconst) == 0 {
-		err = ErrNoNeedReconst
-		return
-	}
-	if len(needReconst) > p {
-		err = ErrTooManyLost
-		return
-	}
-	if len(dpHas) != d {
-		err = ErrDPHasMismatchDataCnt
-		return
-	}
-	for _, i := range dpHas {
-		if i < 0 || i >= d+p {
-			err = ErrIllegalIndex
-			return
-		}
-		if isIn(i, needReconst) {
-			err = ErrHasLostConflict
-			return
-		}
-	}
-	for _, i := range needReconst {
-		if i < 0 || i >= d+p {
-			err = ErrIllegalIndex
-			return
-		}
-	}
-	return
-}
+/* find roots of the error location polynomial */
+         for (i=1; i<=l[u]; i++)
+           reg[i] = elp[u][i] ;
+         count = 0 ;
+         for (i=1; i<=nn; i++)
+          {  q = 1 ;
+             for (j=1; j<=l[u]; j++)
+              if (reg[j]!=-1)
+                { reg[j] = (reg[j]+j)%nn ;
+                  q ^= alpha_to[reg[j]] ;
+                } ;
+             if (!q)        /* store root and error location number indices */
+              { root[count] = i;
+                loc[count] = nn-i ;
+                count++ ;
+              };
+          } ;
+         if (count==l[u])    /* no. roots = degree of elp hence <= tt errors */
+          {
+/* form polynomial z(x) */
+           for (i=1; i<=l[u]; i++)        /* Z[0] = 1 always - do not need */
+            { if ((s[i]!=-1) && (elp[u][i]!=-1))
+                 z[i] = alpha_to[s[i]] ^ alpha_to[elp[u][i]] ;
+              else if ((s[i]!=-1) && (elp[u][i]==-1))
+                      z[i] = alpha_to[s[i]] ;
+                   else if ((s[i]==-1) && (elp[u][i]!=-1))
+                          z[i] = alpha_to[elp[u][i]] ;
+                        else
+                          z[i] = 0 ;
+              for (j=1; j<i; j++)
+                if ((s[j]!=-1) && (elp[u][i-j]!=-1))
+                   z[i] ^= alpha_to[(elp[u][i-j] + s[j])%nn] ;
+              z[i] = index_of[z[i]] ;         /* put into index form */
+            } ;
 
-// SplitNeedReconst split data_lost & parity_lost
-func SplitNeedReconst(dataCnt int, needReconst []int) (dNeedReconst, pNeedReconst []int) {
-	sort.Ints(needReconst)
-	for i, l := range needReconst {
-		if l >= dataCnt {
-			return needReconst[:i], needReconst[i:]
-		}
-	}
-	return needReconst, nil
-}
+  /* evaluate errors at locations given by error location numbers loc[i] */
+           for (i=0; i<nn; i++)
+             { err[i] = 0 ;
+               if (recd[i]!=-1)        /* convert recd[] to polynomial form */
+                 recd[i] = alpha_to[recd[i]] ;
+               else  recd[i] = 0 ;
+             }
+           for (i=0; i<l[u]; i++)    /* compute numerator of error term first */
+            { err[loc[i]] = 1;       /* accounts for z[0] */
+              for (j=1; j<=l[u]; j++)
+                if (z[j]!=-1)
+                  err[loc[i]] ^= alpha_to[(z[j]+j*root[i])%nn] ;
+              if (err[loc[i]]!=0)
+               { err[loc[i]] = index_of[err[loc[i]]] ;
+                 q = 0 ;     /* form denominator of error term */
+                 for (j=0; j<l[u]; j++)
+                   if (j!=i)
+                     q += index_of[1^alpha_to[(loc[j]+root[i])%nn]] ;
+                 q = q % nn ;
+                 err[loc[i]] = alpha_to[(err[loc[i]]-q+nn)%nn] ;
+                 recd[loc[i]] ^= err[loc[i]] ;  /*recd[i] must be in polynomial form */
+               }
+            }
+          }
+         else    /* no. roots != degree of elp => >tt errors and cannot solve */
+           for (i=0; i<nn; i++)        /* could return error flag if desired */
+               if (recd[i]!=-1)        /* convert recd[] to polynomial form */
+                 recd[i] = alpha_to[recd[i]] ;
+               else  recd[i] = 0 ;     /* just output received codeword as is */
+       }
+     else         /* elp has degree has degree >tt hence cannot solve */
+       for (i=0; i<nn; i++)       /* could return error flag if desired */
+          if (recd[i]!=-1)        /* convert recd[] to polynomial form */
+            recd[i] = alpha_to[recd[i]] ;
+          else  recd[i] = 0 ;     /* just output received codeword as is */
+    }
+   else       /* no non-zero syndromes => no errors: output received codeword */
+    for (i=0; i<nn; i++)
+       if (recd[i]!=-1)        /* convert recd[] to polynomial form */
+         recd[i] = alpha_to[recd[i]] ;
+       else  recd[i] = 0 ;
+ }
 
-func isIn(e int, s []int) bool {
-	for _, v := range s {
-		if e == v {
-			return true
-		}
-	}
-	return false
-}
 
-func (r *RS) getGenMatrix(dpHas, dLost []int) (gm []byte, err error) {
-	d := r.DataCnt
-	lostCnt := len(dLost)
-	if !r.cacheEnabled { // no cache
-		eNew, err2 := r.makeEncodeMatrix(dpHas)
-		if err2 != nil {
-			return nil, err2
-		}
-		gm = make([]byte, lostCnt*d)
-		for i, l := range dLost {
-			copy(gm[i*d:i*d+d], eNew[l*d:l*d+d])
-		}
-		return
-	}
-	gm, err = r.getGenMatrixFromCache(dpHas, dLost)
-	if err != nil {
-		return
-	}
-	return
-}
 
-// according to encoding_matrix & dpHas make a new encoding_matrix
-func (r *RS) makeEncodeMatrix(dpHas []int) (em []byte, err error) {
-	d := r.DataCnt
-	m := make([]byte, d*d)
-	for i, l := range dpHas {
-		copy(m[i*d:i*d+d], r.encodeMatrix[l*d:l*d+d])
-	}
-	em, err = matrix(m).invert(d)
-	if err != nil {
-		return
-	}
-	return
-}
+main()
+{
+  register int i;
 
-func (r *RS) getGenMatrixFromCache(dpHas, dLost []int) (gm []byte, err error) {
-	var bitmap uint64 // indicate dpHas
-	for _, i := range dpHas {
-		bitmap += 1 << uint8(i)
-	}
-	d, lostCnt := r.DataCnt, len(dLost)
-	v, ok := r.inverseMatrix.Load(bitmap)
-	if ok {
-		im := v.([]byte)
-		gm = make([]byte, lostCnt*d)
-		for i, l := range dLost {
-			copy(gm[i*d:i*d+d], im[l*d:l*d+d])
-		}
-		return
-	}
-	em, err := r.makeEncodeMatrix(dpHas)
-	if err != nil {
-		return
-	}
-	r.inverseMatrix.Store(bitmap, em)
-	gm = make([]byte, lostCnt*d)
-	for i, l := range dLost {
-		copy(gm[i*d:i*d+d], em[l*d:l*d+d])
-	}
-	return
+/* generate the Galois Field GF(2**mm) */
+  generate_gf() ;
+  printf("Look-up tables for GF(2**%2d)\n",mm) ;
+  printf("  i   alpha_to[i]  index_of[i]\n") ;
+  for (i=0; i<=nn; i++)
+   printf("%3d      %3d          %3d\n",i,alpha_to[i],index_of[i]) ;
+  printf("\n\n") ;
+
+/* compute the generator polynomial for this RS code */
+  gen_poly() ;
+
+
+/* for known data, stick a few numbers into a zero codeword. Data is in
+   polynomial form.
+*/
+for  (i=0; i<kk; i++)   data[i] = 0 ;
+
+/* for example, say we transmit the following message (nothing special!) */
+data[0] = 8 ;
+data[1] = 6 ;
+data[2] = 8 ;
+data[3] = 1 ;
+data[4] = 2 ;
+data[5] = 4 ;
+data[6] = 15 ;
+data[7] = 9 ;
+data[8] = 9 ;
+
+/* encode data[] to produce parity in bb[].  Data input and parity output
+   is in polynomial form
+*/
+  encode_rs() ;
+
+/* put the transmitted codeword, made up of data plus parity, in recd[] */
+  for (i=0; i<nn-kk; i++)  recd[i] = bb[i] ;
+  for (i=0; i<kk; i++) recd[i+nn-kk] = data[i] ;
+
+/* if you want to test the program, corrupt some of the elements of recd[]
+   here. This can also be done easily in a debugger. */
+/* Again, lets say that a middle element is changed */
+  data[nn-nn/2] = 3 ;
+
+
+  for (i=0; i<nn; i++)
+     recd[i] = index_of[recd[i]] ;          /* put recd[i] into index form */
+
+/* decode recv[] */
+  decode_rs() ;         /* recd[] is returned in polynomial form */
+
+/* print out the relevant stuff - initial and decoded {parity and message} */
+  printf("Results for Reed-Solomon code (n=%3d, k=%3d, t= %3d)\n\n",nn,kk,tt) ;
+  printf("  i  data[i]   recd[i](decoded)   (data, recd in polynomial form)\n");
+  for (i=0; i<nn-kk; i++)
+    printf("%3d    %3d      %3d\n",i, bb[i], recd[i]) ;
+  for (i=nn-kk; i<nn; i++)
+    printf("%3d    %3d      %3d\n",i, data[i-nn+kk], recd[i]) ;
 }
 
 
