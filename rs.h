@@ -40,6 +40,6 @@ Polynomial* find_errata_locator(Polynomial* error_positions);
 Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* errata_loc, uint8_t parity_length);
 Polynomial* correct_errors(Polynomial* syn, Polynomial* err_pos, Polynomial* message);
 
-int decode(const void* src, const void* parity, uint8_t data_size, uint8_t parity_size, void* dest, uint8_t* erasure_pos, uint8_t erasure_count);
+int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t parity_size, uint8_t* dest, uint8_t* erasure_pos, uint8_t erasure_count);
 
 #endif

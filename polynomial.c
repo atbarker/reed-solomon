@@ -47,7 +47,7 @@ int32_t reset(Polynomial* p){
 
 int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size){
     if(p && byte_seq){
-        p->byte_array = byte_seq;
+        memcpy(p->byte_array, byte_seq, size);
 	p->size = size;
 	return 0;
     }else{
@@ -59,7 +59,7 @@ int32_t poly_copy(Polynomial* src, Polynomial* dest){
     if(src && dest){
         dest->size = src->size;
 	dest->array_length = src->array_length;
-        memcpy(dest->byte_array, dest->byte_array, dest->array_length);
+        memcpy(dest->byte_array, src->byte_array, dest->array_length);
 	return 0;
     }else{
         return -1;

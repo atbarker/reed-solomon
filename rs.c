@@ -2,6 +2,7 @@
 #include "rs.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "polynomial.h"
 
@@ -88,7 +89,7 @@ uint8_t gf_add(uint8_t x, uint8_t y){
     return x ^ y;
 }
 
-uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
+uint8_t gf_mult_table(uint8_t x, uint8_t y){
     if(x == 0 || y == 0){
         return 0;
     }
@@ -104,7 +105,7 @@ void populate_mult_lookup(){
     }
 }
 
-uint8_t gf_mult_table(uint8_t x, uint8_t y){
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
     return lookup[x][y];
 }
 
@@ -192,7 +193,7 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
     for(i = 0; i < p->size; i++){
         y = gf_mult_table(y, x) ^ p->byte_array[i];
     }
-    return 0;
+    return y;
 }
 
 void rs_generator_poly(uint8_t n_symbols){
@@ -251,8 +252,9 @@ Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     int i;
     syndromes->size = parity_length + 1;
     syndromes->byte_array[0] = 0;
-    for(i = 0; i < parity_length + 1; i++){
-        syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i));
+    for(i = 1; i < parity_length + 1; i++){
+        syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i-1));
+	print_polynomial(syndromes);
     }
     return syndromes;
 }
@@ -265,6 +267,7 @@ Polynomial* find_errata_locator(Polynomial *error_positions){
     addp = new_poly();
     mulp = new_poly();
     temp = new_poly();
+    apol = new_poly();
     errata_loc->size = 1;
     errata_loc->byte_array[0] = 1;
     mulp->size = 1;
@@ -367,7 +370,7 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     }
 
     corrected = new_poly();
-    corrected->size = message->size;
+    //corrected->size = message->size;
     
     gf_poly_add(message, mag, corrected);
     /*free_poly(c_pos);
@@ -381,7 +384,7 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     return corrected;
 }
 
-int decode(const void* src, const void* parity, uint8_t data_size, uint8_t parity_size, void* dest, uint8_t* erasure_pos, uint8_t erasure_count){
+int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t parity_size, uint8_t* dest, uint8_t* erasure_pos, uint8_t erasure_count){
     Polynomial *input_message = new_poly();
     Polynomial *decoded = new_poly();
     Polynomial *error_pos = new_poly();
@@ -390,14 +393,20 @@ int decode(const void* src, const void* parity, uint8_t data_size, uint8_t parit
     input_message->size = data_size + parity_size;
     decoded->size = input_message->size;
 
+    for(int i = 0; i < data_size; i++){
+        printf("%d, ", (uint8_t) src[i]);
+    }
+    printf("\n");
+
     memcpy(input_message->byte_array, src, data_size);
     memcpy(&input_message->byte_array[data_size], parity, parity_size); 
 
     error_pos->size = erasure_count;
     set(error_pos, erasure_pos, erasure_count); 
+    print_polynomial(input_message);
 
     syndromes = calc_syndromes(input_message, parity_size);
-  
+    print_polynomial(syndromes);
 
     decoded = correct_errors(syndromes, error_pos, input_message);
 
