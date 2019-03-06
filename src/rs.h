@@ -16,6 +16,7 @@ uint8_t gf_div_table;
 //Single number galois field functions
 uint8_t gf_add(uint8_t x, uint8_t y);
 uint8_t gf_mult_table(uint8_t x, uint8_t y);
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y);
 uint8_t gf_div(uint8_t x, uint8_t y);
 uint8_t gf_pow(uint8_t x, uint8_t pow);
 uint8_t gf_inv(uint8_t x);

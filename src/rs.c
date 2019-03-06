@@ -10,6 +10,8 @@
 //our generator polynomial
 static uint8_t* gg;
 
+static uint8_t lookup[255][255];
+
 const uint8_t gf_exp[512] = {
     0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1d, 0x3a, 0x74, 0xe8, 0xcd, 0x87, 0x13, 0x26, 0x4c,
     0x98, 0x2d, 0x5a, 0xb4, 0x75, 0xea, 0xc9, 0x8f, 0x3, 0x6, 0xc, 0x18, 0x30, 0x60, 0xc0, 0x9d,
@@ -92,6 +94,19 @@ uint8_t gf_mult_table(uint8_t x, uint8_t y){
         return 0;
     }
     return gf_exp[gf_log[x] + gf_log[y]];
+}
+
+void populate_mult_lookup(){
+    int i, j = 0;
+    for(i = 0; i < 256; i++){
+        for(j = 0; j < 256; j++){
+            lookup[i][j] = gf_mult_table(i, j);
+	}
+    }
+}
+
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
+    return lookup[x][y];
 }
 
 uint8_t gf_div(uint8_t x, uint8_t y){
