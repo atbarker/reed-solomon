@@ -15,7 +15,9 @@ uint8_t gf_div_table;
 
 //Single number galois field functions
 uint8_t gf_add(uint8_t x, uint8_t y);
+uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly);
 uint8_t gf_mult_table(uint8_t x, uint8_t y);
+void populate_mult_lookup(void);
 uint8_t gf_mult_lookup(uint8_t x, uint8_t y);
 uint8_t gf_div(uint8_t x, uint8_t y);
 uint8_t gf_pow(uint8_t x, uint8_t pow);
@@ -38,7 +40,6 @@ Polynomial* find_errata_locator(Polynomial* error_positions);
 Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* errata_loc, uint8_t parity_length);
 Polynomial* correct_errors(Polynomial* syn, Polynomial* err_pos, Polynomial* message);
 
-void decode(void);
-
+int decode(const void* src, const void* parity, uint8_t data_size, uint8_t parity_size, void* dest, uint8_t* erasure_pos, uint8_t erasure_count);
 
 #endif

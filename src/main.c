@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <time.h>
 #include "rs.h"
 
 int test_galois_field(){
@@ -95,7 +96,32 @@ int test_galois_field(){
     return 0;
 }
 
+int test_multiplication_performance(){
+    clock_t start, end;
+    double cpu_time_used;
+    
+    populate_mult_lookup();
+
+    start = clock();
+    gf_mult(0b10001001, 0b00101010, 0x11d);
+    end = clock();
+    printf("Time to multiply %f\n", ((double) (end - start)));
+
+    start = clock();
+    gf_mult_table(0b10001001, 0b00101010);
+    end = clock();
+    printf("Time to multiply with exp and log tables %f\n", ((double) (end - start)));
+
+    start = clock();
+    gf_mult_lookup(0b10001001, 0b00101010);
+    end = clock();
+    printf("Time to multiply with full lookup table %f\n", ((double) (end - start)));
+
+    return 0;
+}
+
 int main(){
-    test_galois_field();
+    //test_galois_field();
+    test_multiplication_performance();
     return 0;
 }

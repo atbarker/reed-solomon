@@ -368,6 +368,9 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
 	mag->byte_array[err_pos->byte_array[i]] = gf_div(y, err_loc_p);
     }
 
+    corrected = new_poly();
+    corrected->size = message->size;
+    
     gf_poly_add(message, mag, corrected);
     free_poly(c_pos);
     free_poly(error_loc);
@@ -380,6 +383,28 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     return corrected;
 }
 
+int decode(const void* src, const void* parity, uint8_t data_size, uint8_t parity_size, void* dest, uint8_t* erasure_pos, uint8_t erasure_count){
+    Polynomial *input_message = new_poly();
+    Polynomial *decoded = new_poly();
+    Polynomial *error_pos = new_poly();
+    Polynomial *syndromes;
 
+    input_message->size = data_size + parity_size;
+    decoded->size = input_message->size;
+
+    memcpy(input_message->byte_array, src, data_size);
+    memcpy(&input_message->byte_array[data_size], parity, parity_size); 
+
+    error_pos->size = erasure_count;
+    set(error_pos, erasure_pos, erasure_count); 
+
+    syndromes = calc_syndromes(input_message, parity_size);
+  
+
+    decoded = correct_errors(syndromes, error_pos, input_message);
+
+    memcpy(dest, decoded->byte_array, decoded->size);
+    return 0;
+}
 
 
