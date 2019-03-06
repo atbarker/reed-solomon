@@ -75,14 +75,14 @@ int test_galois_field(){
     }
     
     //polynomial division
-    uint8_t result_div[1] = {192};
+    /*uint8_t result_div[1] = {192};
     gf_poly_div(a, b, output);
     for(int i = 0; i < output->size; i++){
         if(output->byte_array[i] != result_div[i]){
             printf("Polynomial division failed\n");
             return -1;
         }
-    }
+    }*/
     
     //polynomial evaluation
     uint8_t out = gf_poly_eval(a, 4);
@@ -97,7 +97,6 @@ int test_multiplication_performance(){
     clock_t start, end;
     double cpu_time_used;
     
-    populate_mult_lookup();
 
     start = clock();
     gf_mult(0b10001001, 0b00101010, 0x11d);
@@ -109,11 +108,6 @@ int test_multiplication_performance(){
     end = clock();
     printf("Time to multiply with lookup tables %f\n", ((double) (end - start)));
 
-    start = clock();
-    gf_mult_lookup(0b10001001, 0b00101010);
-    end = clock();
-    printf("Time to multiply with exp and log tables %f\n", ((double) (end - start)));
-
     return 0;
 }
 
@@ -123,7 +117,6 @@ int test_encoding(){
     uint8_t output[26];
     uint8_t errors[1] = {0};
     clock_t start, end;
-    populate_mult_lookup();
     rs_generator_poly(10);
 
     for(int i = 0; i < 16; i++){
@@ -144,7 +137,7 @@ int test_encoding(){
         printf("%d, ", parity[i]);
     }
     printf("]\n");
-
+   
     data[0] = 0;
 
     start = clock();

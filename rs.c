@@ -7,64 +7,13 @@
 #include "polynomial.h"
 
 //NOTE all of this uses the primitive polynomial P(x) = x^8 + x^4 + x^3 + x^2 + 1 or in hex Ox11D
+uint8_t gf_exp[512] = {1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232, 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201, 143, 3, 6, 12, 24, 48, 96, 192, 157, 39, 78, 156, 37, 74, 148, 53, 106, 212, 181, 119, 238, 193, 159, 35, 70, 140, 5, 10, 20, 40, 80, 160, 93, 186, 105, 210, 185, 111, 222, 161, 95, 190, 97, 194, 153, 47, 94, 188, 101, 202, 137, 15, 30, 60, 120, 240, 253, 231, 211, 187, 107, 214, 177, 127, 254, 225, 223, 163, 91, 182, 113, 226, 217, 175, 67, 134, 17, 34, 68, 136, 13, 26, 52, 104, 208, 189, 103, 206, 129, 31, 62, 124, 248, 237, 199, 147, 59, 118, 236, 197, 151, 51, 102, 204, 133, 23, 46, 92, 184, 109, 218, 169, 79, 158, 33, 66, 132, 21, 42, 84, 168, 77, 154, 41, 82, 164, 85, 170, 73, 146, 57, 114, 228, 213, 183, 115, 230, 209, 191, 99, 198, 145, 63, 126, 252, 229, 215, 179, 123, 246, 241, 255, 227, 219, 171, 75, 150, 49, 98, 196, 149, 55, 110, 220, 165, 87, 174, 65, 130, 25, 50, 100, 200, 141, 7, 14, 28, 56, 112, 224, 221, 167, 83, 166, 81, 162, 89, 178, 121, 242, 249, 239, 195, 155, 43, 86, 172, 69, 138, 9, 18, 36, 72, 144, 61, 122, 244, 245, 247, 243, 251, 235, 203, 139, 11, 22, 44, 88, 176, 125, 250, 233, 207, 131, 27, 54, 108, 216, 173, 71, 142, 1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232, 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201, 143, 3, 6, 12, 24, 48, 96, 192, 157, 39, 78, 156, 37, 74, 148, 53, 106, 212, 181, 119, 238, 193, 159, 35, 70, 140, 5, 10, 20, 40, 80, 160, 93, 186, 105, 210, 185, 111, 222, 161, 95, 190, 97, 194, 153, 47, 94, 188, 101, 202, 137, 15, 30, 60, 120, 240, 253, 231, 211, 187, 107, 214, 177, 127, 254, 225, 223, 163, 91, 182, 113, 226, 217, 175, 67, 134, 17, 34, 68, 136, 13, 26, 52, 104, 208, 189, 103, 206, 129, 31, 62, 124, 248, 237, 199, 147, 59, 118, 236, 197, 151, 51, 102, 204, 133, 23, 46, 92, 184, 109, 218, 169, 79, 158, 33, 66, 132, 21, 42, 84, 168, 77, 154, 41, 82, 164, 85, 170, 73, 146, 57, 114, 228, 213, 183, 115, 230, 209, 191, 99, 198, 145, 63, 126, 252, 229, 215, 179, 123, 246, 241, 255, 227, 219, 171, 75, 150, 49, 98, 196, 149, 55, 110, 220, 165, 87, 174, 65, 130, 25, 50, 100, 200, 141, 7, 14, 28, 56, 112, 224, 221, 167, 83, 166, 81, 162, 89, 178, 121, 242, 249, 239, 195, 155, 43, 86, 172, 69, 138, 9, 18, 36, 72, 144, 61, 122, 244, 245, 247, 243, 251, 235, 203, 139, 11, 22, 44, 88, 176, 125, 250, 233, 207, 131, 27, 54, 108, 216, 173, 71, 142};
 
-//our generator polynomial
+uint8_t gf_log[256] = {0, 0, 1, 25, 2, 50, 26, 198, 3, 223, 51, 238, 27, 104, 199, 75, 4, 100, 224, 14, 52, 141, 239, 129, 28, 193, 105, 248, 200, 8, 76, 113, 5, 138, 101, 47, 225, 36, 15, 33, 53, 147, 142, 218, 240, 18, 130, 69, 29, 181, 194, 125, 106, 39, 249, 185, 201, 154, 9, 120, 77, 228, 114, 166, 6, 191, 139, 98, 102, 221, 48, 253, 226, 152, 37, 179, 16, 145, 34, 136, 54, 208, 148, 206, 143, 150, 219, 189, 241, 210, 19, 92, 131, 56, 70, 64, 30, 66, 182, 163, 195, 72, 126, 110, 107, 58, 40, 84, 250, 133, 186, 61, 202, 94, 155, 159, 10, 21, 121, 43, 78, 212, 229, 172, 115, 243, 167, 87, 7, 112, 192, 247, 140, 128, 99, 13, 103, 74, 222, 237, 49, 197, 254, 24, 227, 165, 153, 119, 38, 184, 180, 124, 17, 68, 146, 217, 35, 32, 137, 46, 55, 63, 209, 91, 149, 188, 207, 205, 144, 135, 151, 178, 220, 252, 190, 97, 242, 86, 211, 171, 20, 42, 93, 158, 132, 60, 57, 83, 71, 109, 65, 162, 31, 45, 67, 216, 183, 123, 164, 118, 196, 23, 73, 236, 127, 12, 111, 246, 108, 161, 59, 82, 41, 157, 85, 170, 251, 96, 134, 177, 187, 204, 62, 90, 203, 89, 95, 176, 156, 169, 160, 81, 11, 245, 22, 235, 122, 117, 44, 215, 79, 174, 213, 233, 230, 231, 173, 232, 116, 214, 244, 234, 168, 80, 88, 175};
 
-static uint8_t lookup[255][255];
-
-const uint8_t gf_exp[512] = {
-    0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1d, 0x3a, 0x74, 0xe8, 0xcd, 0x87, 0x13, 0x26, 0x4c,
-    0x98, 0x2d, 0x5a, 0xb4, 0x75, 0xea, 0xc9, 0x8f, 0x3, 0x6, 0xc, 0x18, 0x30, 0x60, 0xc0, 0x9d,
-    0x27, 0x4e, 0x9c, 0x25, 0x4a, 0x94, 0x35, 0x6a, 0xd4, 0xb5, 0x77, 0xee, 0xc1, 0x9f, 0x23, 0x46,
-    0x8c, 0x5, 0xa, 0x14, 0x28, 0x50, 0xa0, 0x5d, 0xba, 0x69, 0xd2, 0xb9, 0x6f, 0xde, 0xa1, 0x5f,
-    0xbe, 0x61, 0xc2, 0x99, 0x2f, 0x5e, 0xbc, 0x65, 0xca, 0x89, 0xf, 0x1e, 0x3c, 0x78, 0xf0, 0xfd,
-    0xe7, 0xd3, 0xbb, 0x6b, 0xd6, 0xb1, 0x7f, 0xfe, 0xe1, 0xdf, 0xa3, 0x5b, 0xb6, 0x71, 0xe2, 0xd9,
-    0xaf, 0x43, 0x86, 0x11, 0x22, 0x44, 0x88, 0xd, 0x1a, 0x34, 0x68, 0xd0, 0xbd, 0x67, 0xce, 0x81,
-    0x1f, 0x3e, 0x7c, 0xf8, 0xed, 0xc7, 0x93, 0x3b, 0x76, 0xec, 0xc5, 0x97, 0x33, 0x66, 0xcc, 0x85,
-    0x17, 0x2e, 0x5c, 0xb8, 0x6d, 0xda, 0xa9, 0x4f, 0x9e, 0x21, 0x42, 0x84, 0x15, 0x2a, 0x54, 0xa8,
-    0x4d, 0x9a, 0x29, 0x52, 0xa4, 0x55, 0xaa, 0x49, 0x92, 0x39, 0x72, 0xe4, 0xd5, 0xb7, 0x73, 0xe6,
-    0xd1, 0xbf, 0x63, 0xc6, 0x91, 0x3f, 0x7e, 0xfc, 0xe5, 0xd7, 0xb3, 0x7b, 0xf6, 0xf1, 0xff, 0xe3,
-    0xdb, 0xab, 0x4b, 0x96, 0x31, 0x62, 0xc4, 0x95, 0x37, 0x6e, 0xdc, 0xa5, 0x57, 0xae, 0x41, 0x82,
-    0x19, 0x32, 0x64, 0xc8, 0x8d, 0x7, 0xe, 0x1c, 0x38, 0x70, 0xe0, 0xdd, 0xa7, 0x53, 0xa6, 0x51,
-    0xa2, 0x59, 0xb2, 0x79, 0xf2, 0xf9, 0xef, 0xc3, 0x9b, 0x2b, 0x56, 0xac, 0x45, 0x8a, 0x9, 0x12,
-    0x24, 0x48, 0x90, 0x3d, 0x7a, 0xf4, 0xf5, 0xf7, 0xf3, 0xfb, 0xeb, 0xcb, 0x8b, 0xb, 0x16, 0x2c,
-    0x58, 0xb0, 0x7d, 0xfa, 0xe9, 0xcf, 0x83, 0x1b, 0x36, 0x6c, 0xd8, 0xad, 0x47, 0x8e, 0x1, 0x2,
-    0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1d, 0x3a, 0x74, 0xe8, 0xcd, 0x87, 0x13, 0x26, 0x4c, 0x98,
-    0x2d, 0x5a, 0xb4, 0x75, 0xea, 0xc9, 0x8f, 0x3, 0x6, 0xc, 0x18, 0x30, 0x60, 0xc0, 0x9d, 0x27,
-    0x4e, 0x9c, 0x25, 0x4a, 0x94, 0x35, 0x6a, 0xd4, 0xb5, 0x77, 0xee, 0xc1, 0x9f, 0x23, 0x46, 0x8c,
-    0x5, 0xa, 0x14, 0x28, 0x50, 0xa0, 0x5d, 0xba, 0x69, 0xd2, 0xb9, 0x6f, 0xde, 0xa1, 0x5f, 0xbe,
-    0x61, 0xc2, 0x99, 0x2f, 0x5e, 0xbc, 0x65, 0xca, 0x89, 0xf, 0x1e, 0x3c, 0x78, 0xf0, 0xfd, 0xe7,
-    0xd3, 0xbb, 0x6b, 0xd6, 0xb1, 0x7f, 0xfe, 0xe1, 0xdf, 0xa3, 0x5b, 0xb6, 0x71, 0xe2, 0xd9, 0xaf,
-    0x43, 0x86, 0x11, 0x22, 0x44, 0x88, 0xd, 0x1a, 0x34, 0x68, 0xd0, 0xbd, 0x67, 0xce, 0x81, 0x1f,
-    0x3e, 0x7c, 0xf8, 0xed, 0xc7, 0x93, 0x3b, 0x76, 0xec, 0xc5, 0x97, 0x33, 0x66, 0xcc, 0x85, 0x17,
-    0x2e, 0x5c, 0xb8, 0x6d, 0xda, 0xa9, 0x4f, 0x9e, 0x21, 0x42, 0x84, 0x15, 0x2a, 0x54, 0xa8, 0x4d,
-    0x9a, 0x29, 0x52, 0xa4, 0x55, 0xaa, 0x49, 0x92, 0x39, 0x72, 0xe4, 0xd5, 0xb7, 0x73, 0xe6, 0xd1,
-    0xbf, 0x63, 0xc6, 0x91, 0x3f, 0x7e, 0xfc, 0xe5, 0xd7, 0xb3, 0x7b, 0xf6, 0xf1, 0xff, 0xe3, 0xdb,
-    0xab, 0x4b, 0x96, 0x31, 0x62, 0xc4, 0x95, 0x37, 0x6e, 0xdc, 0xa5, 0x57, 0xae, 0x41, 0x82, 0x19,
-    0x32, 0x64, 0xc8, 0x8d, 0x7, 0xe, 0x1c, 0x38, 0x70, 0xe0, 0xdd, 0xa7, 0x53, 0xa6, 0x51, 0xa2,
-    0x59, 0xb2, 0x79, 0xf2, 0xf9, 0xef, 0xc3, 0x9b, 0x2b, 0x56, 0xac, 0x45, 0x8a, 0x9, 0x12, 0x24,
-    0x48, 0x90, 0x3d, 0x7a, 0xf4, 0xf5, 0xf7, 0xf3, 0xfb, 0xeb, 0xcb, 0x8b, 0xb, 0x16, 0x2c, 0x58,
-    0xb0, 0x7d, 0xfa, 0xe9, 0xcf, 0x83, 0x1b, 0x36, 0x6c, 0xd8, 0xad, 0x47, 0x8e, 0x1, 0x2
-};
-
-const uint8_t gf_log[256] = {
-    0x0, 0x0, 0x1, 0x19, 0x2, 0x32, 0x1a, 0xc6, 0x3, 0xdf, 0x33, 0xee, 0x1b, 0x68, 0xc7, 0x4b, 0x4,
-    0x64, 0xe0, 0xe, 0x34, 0x8d, 0xef, 0x81, 0x1c, 0xc1, 0x69, 0xf8, 0xc8, 0x8, 0x4c, 0x71, 0x5,
-    0x8a, 0x65, 0x2f, 0xe1, 0x24, 0xf, 0x21, 0x35, 0x93, 0x8e, 0xda, 0xf0, 0x12, 0x82, 0x45, 0x1d,
-    0xb5, 0xc2, 0x7d, 0x6a, 0x27, 0xf9, 0xb9, 0xc9, 0x9a, 0x9, 0x78, 0x4d, 0xe4, 0x72, 0xa6, 0x6,
-    0xbf, 0x8b, 0x62, 0x66, 0xdd, 0x30, 0xfd, 0xe2, 0x98, 0x25, 0xb3, 0x10, 0x91, 0x22, 0x88, 0x36,
-    0xd0, 0x94, 0xce, 0x8f, 0x96, 0xdb, 0xbd, 0xf1, 0xd2, 0x13, 0x5c, 0x83, 0x38, 0x46, 0x40, 0x1e,
-    0x42, 0xb6, 0xa3, 0xc3, 0x48, 0x7e, 0x6e, 0x6b, 0x3a, 0x28, 0x54, 0xfa, 0x85, 0xba, 0x3d, 0xca,
-    0x5e, 0x9b, 0x9f, 0xa, 0x15, 0x79, 0x2b, 0x4e, 0xd4, 0xe5, 0xac, 0x73, 0xf3, 0xa7, 0x57, 0x7,
-    0x70, 0xc0, 0xf7, 0x8c, 0x80, 0x63, 0xd, 0x67, 0x4a, 0xde, 0xed, 0x31, 0xc5, 0xfe, 0x18, 0xe3,
-    0xa5, 0x99, 0x77, 0x26, 0xb8, 0xb4, 0x7c, 0x11, 0x44, 0x92, 0xd9, 0x23, 0x20, 0x89, 0x2e, 0x37,
-    0x3f, 0xd1, 0x5b, 0x95, 0xbc, 0xcf, 0xcd, 0x90, 0x87, 0x97, 0xb2, 0xdc, 0xfc, 0xbe, 0x61, 0xf2,
-    0x56, 0xd3, 0xab, 0x14, 0x2a, 0x5d, 0x9e, 0x84, 0x3c, 0x39, 0x53, 0x47, 0x6d, 0x41, 0xa2, 0x1f,
-    0x2d, 0x43, 0xd8, 0xb7, 0x7b, 0xa4, 0x76, 0xc4, 0x17, 0x49, 0xec, 0x7f, 0xc, 0x6f, 0xf6, 0x6c,
-    0xa1, 0x3b, 0x52, 0x29, 0x9d, 0x55, 0xaa, 0xfb, 0x60, 0x86, 0xb1, 0xbb, 0xcc, 0x3e, 0x5a, 0xcb,
-    0x59, 0x5f, 0xb0, 0x9c, 0xa9, 0xa0, 0x51, 0xb, 0xf5, 0x16, 0xeb, 0x7a, 0x75, 0x2c, 0xd7, 0x4f,
-    0xae, 0xd5, 0xe9, 0xe6, 0xe7, 0xad, 0xe8, 0x74, 0xd6, 0xf4, 0xea, 0xa8, 0x50, 0x58, 0xaf
-};
+uint8_t mod(int32_t a, int32_t b){
+   return (a % b + b) % b;
+}
 
 //performs galois field arithmetic between x and y, no lookup tables
 uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly){
@@ -96,28 +45,15 @@ uint8_t gf_mult_table(uint8_t x, uint8_t y){
     return gf_exp[gf_log[x] + gf_log[y]];
 }
 
-void populate_mult_lookup(){
-    int i, j = 0;
-    for(i = 0; i < 256; i++){
-        for(j = 0; j < 256; j++){
-            lookup[i][j] = gf_mult_table(i, j);
-	}
-    }
-}
-
-uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
-    return lookup[x][y];
-}
-
-uint8_t gf_div(uint8_t x, uint8_t y){
+uint8_t gf_div(int x, int y){
     //should be a divide by zero error
     if(y == 0) return 0;
     if(x == 0) return 0;
-    return gf_exp[(gf_log[x] + 255 - gf_log[y]) % 255];
+    return gf_exp[mod((gf_log[x] + 255 - gf_log[y]), 255)];
 }
 
-uint8_t gf_pow(uint8_t x, uint8_t pow){
-    return gf_exp[(gf_log[x] * pow) % 255];
+uint8_t gf_pow(int x, int pow){
+    return gf_exp[mod((gf_log[x] * pow), 255)];
 }
 
 uint8_t gf_inv(uint8_t x){
@@ -161,7 +97,7 @@ int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output){
     return 0;
 }
 
-int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output){
+int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output, Polynomial *remainder){
     uint8_t coef;
     int i, j;
     size_t sep;
@@ -171,19 +107,20 @@ int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output){
 
     output->size = a->size;
 
-    for(i = 0; i < (a->size - (b->size -1)); i++){
+    for(i = 0; i < (a->size - (b->size - 1)); i++){
         coef = output->byte_array[i];
-	for(j = 0; j < b->size; j++){
-            if(b->byte_array[j] != 0){
-                output->byte_array[i+j] ^= gf_mult_table(b->byte_array[j], coef);
+	if(coef != 0){
+	    for(j = 1; j < b->size; j++){
+                if(b->byte_array[j] != 0){
+                    output->byte_array[i+j] ^= gf_mult_table(b->byte_array[j], coef);
+                }
             }
-        }
+	}
     }
-
-    sep = a->size -(b->size -1);
-    memmove(output, output+sep, (output->size - sep));
+    sep = (b->size - 1);
     output->size = output->size - sep;
-    
+    remainder->size = sep;
+    memcpy(remainder->byte_array, &output->byte_array[output->size], sep); 
     return 0;
 }
 
@@ -211,8 +148,9 @@ void rs_generator_poly(uint8_t n_symbols){
 	mulp->byte_array[1] = gf_pow(2, i);
 
 	gf_poly_mult(gen_poly, mulp, temp);
-
+        
 	poly_copy(temp, gen_poly);
+	reset(temp);
     }
     //free_poly(mulp);
     //free_poly(temp);
@@ -220,28 +158,26 @@ void rs_generator_poly(uint8_t n_symbols){
 
 //input and output buffers are assumed to be populated
 void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length){
-    Polynomial *input, *output;
+    Polynomial *output;
     int i, j;
     //temporary variable for encoding
     uint8_t coef = 0;
 
     //make sure we are in our block size limit for GF(2^8)
     assert(data_length + parity_length < 256);
-    input = new_poly();
-    set(input, (uint8_t*) data, data_length);
     output = new_poly();
-    set(output, (uint8_t*) parity, parity_length);
+    output->size = parity_length + data_length;
+    memcpy(output->byte_array, data, data_length);
     
     for(i = 0; i < data_length; i++){
-        coef = input->byte_array[i];
+        coef = output->byte_array[i];
 	if(coef != 0){
-            for(j = 0; j < gen_poly->size; j++){
+            for(j = 1; j < gen_poly->size; j++){
                 output->byte_array[i+j] ^= gf_mult_table(gen_poly->byte_array[j], coef);
 	    }
 	}
     }
-
-    memcpy(parity, output->byte_array, parity_length);
+    memcpy(parity, &output->byte_array[data_length], parity_length);
 
     //free_poly(input);
     //free_poly(output);
@@ -250,11 +186,10 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     Polynomial *syndromes = new_poly();
     int i;
-    syndromes->size = parity_length;
+    syndromes->size = parity_length+1;
     syndromes->byte_array[0] = 0;
-    for(i = 0; i < parity_length; i++){
-        syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i));
-	print_polynomial(syndromes);
+    for(i = 1; i < parity_length+1; i++){
+        syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i-1));
     }
     return syndromes;
 }
@@ -296,13 +231,16 @@ Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* errata_loc, u
     Polynomial* mulp = new_poly();
     Polynomial* divisor = new_poly();
     Polynomial* evaluator = new_poly();
+    Polynomial* output = new_poly();
 
     gf_poly_mult(syndrome, errata_loc, mulp);
     divisor->size = parity_length+2;
     reset(divisor);
     divisor->byte_array[0] = 1;
+    printf("divisor\n");
+    print_polynomial(divisor);
 
-    gf_poly_div(mulp, divisor, evaluator);
+    gf_poly_div(mulp, divisor, output, evaluator);
     //free_poly(mulp);
     //free_poly(divisor);
     return evaluator;
@@ -314,43 +252,47 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     uint16_t l;
     uint8_t Xi_inv, err_loc_p, y;
 
+    //have to set the error positions as if the last parity symbol is at the start of the codeword polynomial
     c_pos = new_poly();
     c_pos->size = err_pos->size;
     for(i = 0; i < err_pos->size; i++){
         c_pos->byte_array[i] = message->size - 1 - err_pos->byte_array[i];
     }
 
+    //Calculate the error locator polynomial from the 
     error_loc = find_errata_locator(c_pos);
 
+    //Reverse the syndromes polynomial much like the error positions one
     rsynd = new_poly();
     rsynd->size = syndromes->size;
-
     for(i = syndromes->size-1, j = 0; i >= 0; i--, j++){
         rsynd->byte_array[j] = syndromes->byte_array[i];
     }
 
+    //The evaluator spits out a reversed polynomial, we have to fix that
     reval = find_error_evaluator(rsynd, error_loc, error_loc->size-1);
-
     eval = new_poly();
     eval->size = reval->size;
     for(i = reval->size-1, j = 0; i >= 0; i--, j++){
         eval->byte_array[j] = reval->byte_array[i];
     }
 
+    //This one stores the results of a Chien Search to produce a final error locator polynomial X
     X = new_poly();
     X->size = 0;
-
     for(i = 0; i < c_pos->size; i++){
         l = 255 - c_pos->byte_array[i];
 	append(X, gf_pow(2, -l));
     }
 
+
+    //initialize the magnitude polynomial and the err_loc_prime placeholder
     mag = new_poly();
     reset(mag);
     mag->size = message->size;
 
     err_loc_prime = new_poly();
-
+    //Forney's Algorithm
     for(i = 0; i < X->size; i++){
         Xi_inv = gf_inv(X->byte_array[i]);
 	err_loc_prime->size = 0;
@@ -364,14 +306,18 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
             err_loc_p = gf_mult_table(err_loc_p, err_loc_prime->byte_array[j]);
         }
 	y = gf_poly_eval(reval, Xi_inv);
+	printf("%d\n", y);
 	y = gf_mult_table(gf_pow(X->byte_array[i], 1), y);
+	printf("%d\n", y);
 
 	mag->byte_array[err_pos->byte_array[i]] = gf_div(y, err_loc_p);
     }
 
     corrected = new_poly();
     //corrected->size = message->size;
-    
+    printf("magnitude polynomial\n");
+    print_polynomial(mag);
+
     gf_poly_add(message, mag, corrected);
     /*free_poly(c_pos);
     free_poly(error_loc);

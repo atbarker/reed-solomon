@@ -28,7 +28,7 @@ void free_poly(Polynomial *p){
 
 int32_t append(Polynomial* p, uint8_t x){
     if(p->size + 1 <= p->array_length){
-        p->byte_array[p->size + 1] = x;
+        p->byte_array[p->size] = x;
 	p->size++;
 	return 0;
     }else{
