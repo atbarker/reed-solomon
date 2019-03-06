@@ -127,7 +127,7 @@ int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output, Polynomial
 uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
     int i;
     uint8_t y = p->byte_array[0];
-    for(i = 0; i < p->size; i++){
+    for(i = 1; i < p->size; i++){
         y = gf_mult_table(y, x) ^ p->byte_array[i];
     }
     return y;
@@ -237,8 +237,6 @@ Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* errata_loc, u
     divisor->size = parity_length+2;
     reset(divisor);
     divisor->byte_array[0] = 1;
-    printf("divisor\n");
-    print_polynomial(divisor);
 
     gf_poly_div(mulp, divisor, output, evaluator);
     //free_poly(mulp);
@@ -306,17 +304,13 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
             err_loc_p = gf_mult_table(err_loc_p, err_loc_prime->byte_array[j]);
         }
 	y = gf_poly_eval(reval, Xi_inv);
-	printf("%d\n", y);
 	y = gf_mult_table(gf_pow(X->byte_array[i], 1), y);
-	printf("%d\n", y);
 
 	mag->byte_array[err_pos->byte_array[i]] = gf_div(y, err_loc_p);
     }
 
     corrected = new_poly();
     //corrected->size = message->size;
-    printf("magnitude polynomial\n");
-    print_polynomial(mag);
 
     gf_poly_add(message, mag, corrected);
     /*free_poly(c_pos);
@@ -339,20 +333,13 @@ int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t
     input_message->size = data_size + parity_size;
     decoded->size = input_message->size;
 
-    for(int i = 0; i < data_size; i++){
-        printf("%d, ", (uint8_t) src[i]);
-    }
-    printf("\n");
-
     memcpy(input_message->byte_array, src, data_size);
     memcpy(&input_message->byte_array[data_size], parity, parity_size); 
 
     error_pos->size = erasure_count;
     set(error_pos, erasure_pos, erasure_count); 
-    print_polynomial(input_message);
 
     syndromes = calc_syndromes(input_message, parity_size);
-    print_polynomial(syndromes);
 
     decoded = correct_errors(syndromes, error_pos, input_message);
 
