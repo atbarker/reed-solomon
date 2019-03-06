@@ -354,7 +354,14 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     }
 
     gf_poly_add(message, mag, corrected);
-
+    free_poly(c_pos);
+    free_poly(error_loc);
+    free_poly(rsynd);
+    free_poly(X);
+    free_poly(reval);
+    free_poly(eval);
+    free_poly(mag);
+    free_poly(err_loc_prime);
     return corrected;
 }
 
