@@ -120,14 +120,24 @@ int test_multiplication_performance(){
 int test_encoding(){
     const uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0x96, 0x70, 0xec};
     uint8_t parity[10];
+    uint8_t output[26];
     clock_t start, end;
     populate_mult_lookup();
     rs_generator_poly(10);
 
     start = clock();
-    encode(data, 16, parity, 10);
+    for(int i = 0; i < 134; i++){
+        encode(data, 16, parity, 10);
+    }
     end = clock();
     printf("Time to encode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+
+    start = clock();
+    for(int i = 0; i < 134; i++){
+        decode(data, parity, 16, 10, output, NULL, 0);
+    }
+    end = clock();
+    printf("Time to decode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
     return 0;
 }
 

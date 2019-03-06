@@ -281,10 +281,10 @@ Polynomial* find_errata_locator(Polynomial *error_positions){
 	poly_copy(temp, errata_loc);
     }
 
-    free_poly(addp);
-    free_poly(mulp);
-    free_poly(apol);
-    free_poly(temp);
+    //free_poly(addp);
+    //free_poly(mulp);
+    //free_poly(apol);
+    //free_poly(temp);
     return errata_loc;
 }
 
@@ -300,8 +300,8 @@ Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* errata_loc, u
     divisor->byte_array[0] = 1;
 
     gf_poly_div(mulp, divisor, evaluator);
-    free_poly(mulp);
-    free_poly(divisor);
+    //free_poly(mulp);
+    //free_poly(divisor);
     return evaluator;
 }
 
@@ -370,14 +370,14 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     corrected->size = message->size;
     
     gf_poly_add(message, mag, corrected);
-    free_poly(c_pos);
+    /*free_poly(c_pos);
     free_poly(error_loc);
     free_poly(rsynd);
     free_poly(X);
     free_poly(reval);
     free_poly(eval);
     free_poly(mag);
-    free_poly(err_loc_prime);
+    free_poly(err_loc_prime);*/
     return corrected;
 }
 
