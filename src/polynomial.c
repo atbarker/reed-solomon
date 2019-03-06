@@ -37,7 +37,7 @@ int32_t append(Polynomial* p, uint8_t x){
 
 int32_t reset(Polynomial* p){
     if(p){
-        p->size = 0;
+        memset(p->byte_array, 0, p->size);
         return 0;
     }else{
         return -1;

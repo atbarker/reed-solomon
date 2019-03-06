@@ -34,8 +34,10 @@ void Encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
 
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length);
 Polynomial* find_errata_locator(Polynomial* error_positions);
-Polynomial* FindErrorEvaluator(Polynomial* synd, Polynomial* errata_loc, Polynomial *dst, uint8_t ecclen);
-Polynomial* CorrectErrata(Polynomial* syn, Polynomial* err_pos, Polynomial* msg);
+Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* errata_loc, uint8_t parity_length);
+Polynomial* correct_errors(Polynomial* syn, Polynomial* err_pos, Polynomial* message);
+
+void decode(void);
 
 
 #endif

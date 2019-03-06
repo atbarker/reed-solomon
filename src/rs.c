@@ -272,6 +272,92 @@ Polynomial* find_errata_locator(Polynomial *error_positions){
     free_poly(mulp);
     free_poly(apol);
     free_poly(temp);
+    return errata_loc;
 }
+
+//really just multiply the error locator by the syndromes and then reverse with division
+Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* errata_loc, uint8_t parity_length){
+    Polynomial* mulp = new_poly();
+    Polynomial* divisor = new_poly();
+    Polynomial* evaluator = new_poly();
+
+    gf_poly_mult(syndrome, errata_loc, mulp);
+    divisor->size = parity_length+2;
+    reset(divisor);
+    divisor->byte_array[0] = 1;
+
+    gf_poly_div(mulp, divisor, evaluator);
+    free_poly(mulp);
+    free_poly(divisor);
+    return evaluator;
+}
+
+Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomial* message){
+    Polynomial *c_pos, *error_loc, *corrected, *rsynd, *reval, *eval, *X, *mag, *err_loc_prime;
+    int i, j;
+    uint16_t l;
+    uint8_t Xi_inv, err_loc_p, y;
+
+    c_pos = new_poly();
+    c_pos->size = err_pos->size;
+    for(i = 0; i < err_pos->size; i++){
+        c_pos->byte_array[i] = message->size - 1 - err_pos->byte_array[i];
+    }
+
+    error_loc = find_errata_locator(c_pos);
+
+    rsynd = new_poly();
+    rsynd->size = syndromes->size;
+
+    for(i = syndromes->size-1, j = 0; i >= 0; i--, j++){
+        rsynd->byte_array[j] = syndromes->byte_array[i];
+    }
+
+    reval = find_error_evaluator(rsynd, error_loc, error_loc->size-1);
+
+    eval = new_poly();
+    eval->size = reval->size;
+    for(i = reval->size-1, j = 0; i >= 0; i--, j++){
+        eval->byte_array[j] = reval->byte_array[i];
+    }
+
+    X = new_poly();
+    X->size = 0;
+
+    for(i = 0; i < c_pos->size; i++){
+        l = 255 - c_pos->byte_array[i];
+	append(X, gf_pow(2, -l));
+    }
+
+    mag = new_poly();
+    reset(mag);
+    mag->size = message->size;
+
+    err_loc_prime = new_poly();
+
+    for(i = 0; i < X->size; i++){
+        Xi_inv = gf_inv(X->byte_array[i]);
+	err_loc_prime->size = 0;
+	for(j = 0; j < X->size; j++){
+            if(j != i){
+                append(err_loc_prime, gf_add(1, gf_mult_table(Xi_inv, X->byte_array[j])));
+	    }
+	}
+	err_loc_p = 1;
+	for(j = 0; j < err_loc_prime->size; j++){
+            err_loc_p = gf_mult_table(err_loc_p, err_loc_prime->byte_array[j]);
+        }
+	y = gf_poly_eval(reval, Xi_inv);
+	y = gf_mult_table(gf_pow(X->byte_array[i], 1), y);
+
+	mag->byte_array[err_pos->byte_array[i]] = gf_div(y, err_loc_p);
+    }
+
+    gf_poly_add(message, mag, corrected);
+
+    return corrected;
+}
+
+
 
 
