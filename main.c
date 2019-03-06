@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <sys/random.h>
 #include "rs.h"
 
 int test_galois_field(){
@@ -86,10 +87,6 @@ int test_galois_field(){
     //polynomial evaluation
     uint8_t out = gf_poly_eval(a, 4);
     
-    //creating the RS generator polynomial
-    output = rs_generator_poly(4);
-
-
     printf("All test pass\n");
     free_poly(a);
     free_poly(b);
@@ -110,18 +107,33 @@ int test_multiplication_performance(){
     start = clock();
     gf_mult_table(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply with exp and log tables %f\n", ((double) (end - start)));
+    printf("Time to multiply with lookup tables %f\n", ((double) (end - start)));
 
     start = clock();
     gf_mult_lookup(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply with full lookup table %f\n", ((double) (end - start)));
+    printf("Time to multiply with exp and log tables %f\n", ((double) (end - start)));
 
+    return 0;
+}
+
+int test_encoding(){
+    const uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0x96, 0x70, 0xec};
+    uint8_t parity[10];
+    clock_t start, end;
+    populate_mult_lookup();
+    rs_generator_poly(10);
+
+    start = clock();
+    encode(data, 16, parity, 10);
+    end = clock();
+    printf("Time to encode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
     return 0;
 }
 
 int main(){
     //test_galois_field();
     test_multiplication_performance();
+    test_encoding();
     return 0;
 }

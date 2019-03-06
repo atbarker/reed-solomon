@@ -20,6 +20,7 @@ Polynomial* new_poly(){
     return p;
 }
 
+//TODO:Something wrong here
 void free_poly(Polynomial *p){
     free(p->byte_array);
     free(p);

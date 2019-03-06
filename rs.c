@@ -8,7 +8,6 @@
 //NOTE all of this uses the primitive polynomial P(x) = x^8 + x^4 + x^3 + x^2 + 1 or in hex Ox11D
 
 //our generator polynomial
-static uint8_t* gg;
 
 static uint8_t lookup[255][255];
 
@@ -89,7 +88,7 @@ uint8_t gf_add(uint8_t x, uint8_t y){
     return x ^ y;
 }
 
-uint8_t gf_mult_table(uint8_t x, uint8_t y){
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
     if(x == 0 || y == 0){
         return 0;
     }
@@ -105,7 +104,7 @@ void populate_mult_lookup(){
     }
 }
 
-uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
+uint8_t gf_mult_table(uint8_t x, uint8_t y){
     return lookup[x][y];
 }
 
@@ -196,27 +195,26 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x){
     return 0;
 }
 
-Polynomial* rs_generator_poly(uint8_t n_symbols){
+void rs_generator_poly(uint8_t n_symbols){
     int i = 0;
-    Polynomial *generator = new_poly();
     Polynomial *mulp = new_poly();
     Polynomial *temp = new_poly();
 
-    generator->byte_array[0] = 1;
-    generator->size = 1;
+    gen_poly = new_poly();
+    gen_poly->byte_array[0] = 1;
+    gen_poly->size = 1;
     mulp->size = 2;
 
     for(i = 0; i < n_symbols; i++){
         mulp->byte_array[0] = 1;
 	mulp->byte_array[1] = gf_pow(2, i);
 
-	gf_poly_mult(generator, mulp, temp);
+	gf_poly_mult(gen_poly, mulp, temp);
 
-	poly_copy(temp, generator);
+	poly_copy(temp, gen_poly);
     }
-    free_poly(mulp);
-    free_poly(temp);
-    return generator;
+    //free_poly(mulp);
+    //free_poly(temp);
 }
 
 //input and output buffers are assumed to be populated
@@ -244,8 +242,8 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
 
     memcpy(parity, output->byte_array, parity_length);
 
-    free_poly(input);
-    free_poly(output);
+    //free_poly(input);
+    //free_poly(output);
 }
 
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
