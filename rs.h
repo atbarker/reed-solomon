@@ -27,6 +27,7 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x);
 
 //Reed-Solomon functions
 
+//initialize tables and generator polynomial
 void rs_init(uint8_t parity_symbols);
 
 //generate the reed-solomon generator polynomial
