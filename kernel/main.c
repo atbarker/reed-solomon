@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/time.h>
+#include <linux/types.h>
 #include "rs.h"
 
 MODULE_LICENSE("MIT");

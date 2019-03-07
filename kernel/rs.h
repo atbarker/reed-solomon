@@ -1,7 +1,7 @@
 #ifndef RS_H
 #define RS_H
 
-#include <stdint.h>
+#include <linux/types.h>
 
 #define poly_max(a, b) ((a > b) ? (a) : (b))
 

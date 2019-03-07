@@ -1,9 +1,7 @@
-#include <assert.h>
 #include "rs.h"
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <linux/string.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>
 
 static uint8_t gf_mul_table[256][256];
 
@@ -13,7 +11,7 @@ static uint8_t gf_exp[512] = {1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232, 205
 static uint8_t gf_log[256] = {0, 0, 1, 25, 2, 50, 26, 198, 3, 223, 51, 238, 27, 104, 199, 75, 4, 100, 224, 14, 52, 141, 239, 129, 28, 193, 105, 248, 200, 8, 76, 113, 5, 138, 101, 47, 225, 36, 15, 33, 53, 147, 142, 218, 240, 18, 130, 69, 29, 181, 194, 125, 106, 39, 249, 185, 201, 154, 9, 120, 77, 228, 114, 166, 6, 191, 139, 98, 102, 221, 48, 253, 226, 152, 37, 179, 16, 145, 34, 136, 54, 208, 148, 206, 143, 150, 219, 189, 241, 210, 19, 92, 131, 56, 70, 64, 30, 66, 182, 163, 195, 72, 126, 110, 107, 58, 40, 84, 250, 133, 186, 61, 202, 94, 155, 159, 10, 21, 121, 43, 78, 212, 229, 172, 115, 243, 167, 87, 7, 112, 192, 247, 140, 128, 99, 13, 103, 74, 222, 237, 49, 197, 254, 24, 227, 165, 153, 119, 38, 184, 180, 124, 17, 68, 146, 217, 35, 32, 137, 46, 55, 63, 209, 91, 149, 188, 207, 205, 144, 135, 151, 178, 220, 252, 190, 97, 242, 86, 211, 171, 20, 42, 93, 158, 132, 60, 57, 83, 71, 109, 65, 162, 31, 45, 67, 216, 183, 123, 164, 118, 196, 23, 73, 236, 127, 12, 111, 246, 108, 161, 59, 82, 41, 157, 85, 170, 251, 96, 134, 177, 187, 204, 62, 90, 203, 89, 95, 176, 156, 169, 160, 81, 11, 245, 22, 235, 122, 117, 44, 215, 79, 174, 213, 233, 230, 231, 173, 232, 116, 214, 244, 234, 168, 80, 88, 175};
 
 Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array){
-    Polynomial *p = malloc(sizeof(Polynomial));
+    Polynomial *p = kmalloc(sizeof(Polynomial), GFP_KERNEL);
     p->size = size;
     p->array_length = length;
     p->byte_array = byte_array;
@@ -21,8 +19,8 @@ Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array){
 }
 
 Polynomial* new_poly(){
-    Polynomial *p = malloc(sizeof(Polynomial));
-    p->byte_array = malloc(256);
+    Polynomial *p = kmalloc(sizeof(Polynomial), GFP_KERNEL);
+    p->byte_array = kmalloc(256, GFP_KERNEL);
     p->size = 0;
     p->array_length = 256;
     return p;
@@ -30,8 +28,8 @@ Polynomial* new_poly(){
 
 //TODO:Something wrong here
 void free_poly(Polynomial *p){
-    free(p->byte_array);
-    free(p);
+    kfree(p->byte_array);
+    kfree(p);
 }
 
 int32_t append(Polynomial* p, uint8_t x){
@@ -96,12 +94,12 @@ uint8_t* mem(Polynomial* p){
 
 void print_polynomial(Polynomial* p){
     int i;
-    printf("Polynomial size: %d\n", p->size);
-    printf("[");
+    printk(KERN_INFO "Polynomial size: %d\n", p->size);
+    printk(KERN_INFO "[");
     for(i = 0; i < p->size; i++){
-        printf(" %d, ", p->byte_array[i]);
+        printk(KERN_INFO " %d, ", p->byte_array[i]);
     }
-    printf("]\n");
+    printk(KERN_INFO "]\n");
 }
 
 uint8_t mod(int32_t a, int32_t b){
@@ -275,7 +273,7 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
     uint8_t coef = 0;
 
     //make sure we are in our block size limit for GF(2^8)
-    assert(data_length + parity_length < 256);
+    //assert(data_length + parity_length < 256);
     output = new_poly();
     output->size = parity_length + data_length;
     memcpy(output->byte_array, data, data_length);
@@ -297,6 +295,7 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     Polynomial *syndromes = new_poly();
     int i;
+
     syndromes->size = parity_length+1;
     syndromes->byte_array[0] = 0;
     for(i = 1; i < parity_length+1; i++){
