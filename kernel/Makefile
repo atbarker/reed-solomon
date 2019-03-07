@@ -2,7 +2,7 @@ PWD := $(shell pwd)
 
 ccflags-y += -I$(src)/include/
 
-RStest-objs := main.o rs.o polynomial.o
+RStest-objs := main.o rs.o
 obj-m += RStest.o
 
 all:
