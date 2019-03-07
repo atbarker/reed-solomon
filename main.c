@@ -17,7 +17,7 @@ int test_galois_field(){
         printf("GF multiplication failed\n");
         return -1;
     }
-    //TODO add part for checking divide by zero errors
+
     if(gf_div(36, 6) != 14){
         printf("GF division failed\n");
 	return -1;
@@ -53,6 +53,7 @@ int test_galois_field(){
 
     //test polynomial scalar multiplication
     Polynomial *output = new_poly();
+    Polynomial *remainder = new_poly();
     gf_poly_scalar(a, output, 4);
     
     //polynomial addition
@@ -76,14 +77,14 @@ int test_galois_field(){
     }
     
     //polynomial division
-    /*uint8_t result_div[1] = {192};
-    gf_poly_div(a, b, output);
+    uint8_t result_div[1] = {192};
+    gf_poly_div(a, b, output, remainder);
     for(int i = 0; i < output->size; i++){
         if(output->byte_array[i] != result_div[i]){
             printf("Polynomial division failed\n");
             return -1;
         }
-    }*/
+    }
     
     //polynomial evaluation
     uint8_t out = gf_poly_eval(a, 4);
@@ -102,12 +103,12 @@ int test_multiplication_performance(){
     start = clock();
     gf_mult(0b10001001, 0b00101010, 0x11d);
     end = clock();
-    printf("Time to multiply %f\n", ((double) (end - start)));
+    printf("Time to multiply %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     start = clock();
     gf_mult_table(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply with lookup tables %f\n", ((double) (end - start)));
+    printf("Time to multiply with lookup tables %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     return 0;
 }
@@ -116,46 +117,40 @@ int test_encoding(){
     //uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
     uint8_t parity[32];
     uint8_t data[223];
-    uint8_t output[26];
+    uint8_t corrupted_data[223];
+    uint8_t output[255];
     uint8_t errors[1] = {0};
     clock_t start, end;
     rs_generator_poly(32);
 
     syscall(SYS_getrandom, data, 223, 0);
 
-    for(int i = 0; i < 16; i++){
-        printf("%d, ", data[i]);
-    }
-    printf("\n");
-    
-
     start = clock();
-    //for(int i = 0; i < 134; i++){
-        encode(data, 16, parity, 10);
-    //}
+    for(int i = 0; i < 134; i++){
+        encode(data, 223, parity, 32);
+    }
     end = clock();
     printf("Time to encode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
-    printf("[");
-    for(int i = 0; i < 10; i++){
-        printf("%d, ", parity[i]);
-    }
-    printf("]\n");
-   
-    data[0] = 0;
+    //corrupt data 
+    memcpy(corrupted_data, data, 223);
+    corrupted_data[0] = 0;
 
     start = clock();
-    //for(int i = 0; i < 134; i++){
-        decode(data, parity, 16, 10, output, errors, 1);
-    //}
+    for(int i = 0; i < 134; i++){
+        decode(corrupted_data, parity, 223, 32, output, errors, 1);
+    }
     end = clock();
     printf("Time to decode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
-    printf("[");
-    for(int i = 0; i < 26; i++){
-        printf("%d, ", output[i]);
+    for(int i = 0; i < 223; i++){
+        if(output[i] != data[i]){
+            printf("Decode failed at character %d\n", i);
+            return -1;
+        }
     }
-    printf("]\n");
+    printf("Decoded successfully.\n");    
+
     return 0;
 }
 
