@@ -7,12 +7,6 @@
 //The generator polynomial, only one instance of this
 static Polynomial* gen_poly;
 
-//tables for storing Galois field operation results, 2D arrays if requiring two operands, so 64KB each
-uint8_t gf_mul_table[256][256];
-uint8_t gf_inv_table[256];
-uint8_t gf_pow_table;
-uint8_t gf_div_table;
-
 //Single number galois field functions
 uint8_t init_tables(void);
 uint8_t gf_add(uint8_t x, uint8_t y);
@@ -37,8 +31,8 @@ void rs_generator_poly(uint8_t n_symbols);
 void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
 
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length);
-Polynomial* find_errata_locator(Polynomial* error_positions);
-Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* errata_loc, uint8_t parity_length);
+Polynomial* find_error_locator(Polynomial* error_positions);
+Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* error_loc, uint8_t parity_length);
 Polynomial* correct_errors(Polynomial* syn, Polynomial* err_pos, Polynomial* message);
 
 int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t parity_size, uint8_t* dest, uint8_t* erasure_pos, uint8_t erasure_count);

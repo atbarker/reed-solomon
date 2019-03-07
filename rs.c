@@ -6,6 +6,8 @@
 #include <string.h>
 #include "polynomial.h"
 
+static uint8_t gf_mul_table[256][256];
+
 //NOTE all of this uses the primitive polynomial P(x) = x^8 + x^4 + x^3 + x^2 + 1 or in hex Ox11D
 uint8_t gf_exp[512] = {1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232, 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201, 143, 3, 6, 12, 24, 48, 96, 192, 157, 39, 78, 156, 37, 74, 148, 53, 106, 212, 181, 119, 238, 193, 159, 35, 70, 140, 5, 10, 20, 40, 80, 160, 93, 186, 105, 210, 185, 111, 222, 161, 95, 190, 97, 194, 153, 47, 94, 188, 101, 202, 137, 15, 30, 60, 120, 240, 253, 231, 211, 187, 107, 214, 177, 127, 254, 225, 223, 163, 91, 182, 113, 226, 217, 175, 67, 134, 17, 34, 68, 136, 13, 26, 52, 104, 208, 189, 103, 206, 129, 31, 62, 124, 248, 237, 199, 147, 59, 118, 236, 197, 151, 51, 102, 204, 133, 23, 46, 92, 184, 109, 218, 169, 79, 158, 33, 66, 132, 21, 42, 84, 168, 77, 154, 41, 82, 164, 85, 170, 73, 146, 57, 114, 228, 213, 183, 115, 230, 209, 191, 99, 198, 145, 63, 126, 252, 229, 215, 179, 123, 246, 241, 255, 227, 219, 171, 75, 150, 49, 98, 196, 149, 55, 110, 220, 165, 87, 174, 65, 130, 25, 50, 100, 200, 141, 7, 14, 28, 56, 112, 224, 221, 167, 83, 166, 81, 162, 89, 178, 121, 242, 249, 239, 195, 155, 43, 86, 172, 69, 138, 9, 18, 36, 72, 144, 61, 122, 244, 245, 247, 243, 251, 235, 203, 139, 11, 22, 44, 88, 176, 125, 250, 233, 207, 131, 27, 54, 108, 216, 173, 71, 142, 1, 2, 4, 8, 16, 32, 64, 128, 29, 58, 116, 232, 205, 135, 19, 38, 76, 152, 45, 90, 180, 117, 234, 201, 143, 3, 6, 12, 24, 48, 96, 192, 157, 39, 78, 156, 37, 74, 148, 53, 106, 212, 181, 119, 238, 193, 159, 35, 70, 140, 5, 10, 20, 40, 80, 160, 93, 186, 105, 210, 185, 111, 222, 161, 95, 190, 97, 194, 153, 47, 94, 188, 101, 202, 137, 15, 30, 60, 120, 240, 253, 231, 211, 187, 107, 214, 177, 127, 254, 225, 223, 163, 91, 182, 113, 226, 217, 175, 67, 134, 17, 34, 68, 136, 13, 26, 52, 104, 208, 189, 103, 206, 129, 31, 62, 124, 248, 237, 199, 147, 59, 118, 236, 197, 151, 51, 102, 204, 133, 23, 46, 92, 184, 109, 218, 169, 79, 158, 33, 66, 132, 21, 42, 84, 168, 77, 154, 41, 82, 164, 85, 170, 73, 146, 57, 114, 228, 213, 183, 115, 230, 209, 191, 99, 198, 145, 63, 126, 252, 229, 215, 179, 123, 246, 241, 255, 227, 219, 171, 75, 150, 49, 98, 196, 149, 55, 110, 220, 165, 87, 174, 65, 130, 25, 50, 100, 200, 141, 7, 14, 28, 56, 112, 224, 221, 167, 83, 166, 81, 162, 89, 178, 121, 242, 249, 239, 195, 155, 43, 86, 172, 69, 138, 9, 18, 36, 72, 144, 61, 122, 244, 245, 247, 243, 251, 235, 203, 139, 11, 22, 44, 88, 176, 125, 250, 233, 207, 131, 27, 54, 108, 216, 173, 71, 142};
 
@@ -38,15 +40,28 @@ uint8_t gf_add(uint8_t x, uint8_t y){
     return x ^ y;
 }
 
-uint8_t gf_mult_table(uint8_t x, uint8_t y){
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y){
     if(x == 0 || y == 0){
         return 0;
     }
     return gf_exp[gf_log[x] + gf_log[y]];
 }
 
+uint8_t gf_mult_table(uint8_t x, uint8_t y){
+    return gf_mul_table[x][y];
+}
+
+void populate_mult_lookup(){
+    int i, j;
+    for(i = 0; i < 256; i++){
+        for(j = 0; j < 256; j++){
+            gf_mul_table[i][j] = gf_mult_lookup(i, j);
+        }
+    }
+}
+
 uint8_t gf_div(int x, int y){
-    //should be a divide by zero error
+    //should be a divide by zero error, if we are dividing by zero just return 0
     if(y == 0) return 0;
     if(x == 0) return 0;
     return gf_exp[mod((gf_log[x] + 255 - gf_log[y]), 255)];
@@ -194,17 +209,17 @@ Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     return syndromes;
 }
 
-Polynomial* find_errata_locator(Polynomial *error_positions){
-    Polynomial *errata_loc, *mulp, *addp, *apol, *temp;
+Polynomial* find_error_locator(Polynomial *error_positions){
+    Polynomial *error_loc, *mulp, *addp, *apol, *temp;
     int i;
 
-    errata_loc = new_poly();
+    error_loc = new_poly();
     addp = new_poly();
     mulp = new_poly();
     temp = new_poly();
     apol = new_poly();
-    errata_loc->size = 1;
-    errata_loc->byte_array[0] = 1;
+    error_loc->size = 1;
+    error_loc->byte_array[0] = 1;
     mulp->size = 1;
     addp->size = 2;
 
@@ -214,26 +229,26 @@ Polynomial* find_errata_locator(Polynomial *error_positions){
 	addp->byte_array[1] = 0;
 
 	gf_poly_add(mulp, addp, apol);
-	gf_poly_mult(errata_loc, apol, temp);
+	gf_poly_mult(error_loc, apol, temp);
 
-	poly_copy(temp, errata_loc);
+	poly_copy(temp, error_loc);
     }
 
     //free_poly(addp);
     //free_poly(mulp);
     //free_poly(apol);
     //free_poly(temp);
-    return errata_loc;
+    return error_loc;
 }
 
 //really just multiply the error locator by the syndromes and then reverse with division
-Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* errata_loc, uint8_t parity_length){
+Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* error_loc, uint8_t parity_length){
     Polynomial* mulp = new_poly();
     Polynomial* divisor = new_poly();
     Polynomial* evaluator = new_poly();
     Polynomial* output = new_poly();
 
-    gf_poly_mult(syndrome, errata_loc, mulp);
+    gf_poly_mult(syndrome, error_loc, mulp);
     divisor->size = parity_length+2;
     reset(divisor);
     divisor->byte_array[0] = 1;
@@ -258,7 +273,7 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     }
 
     //Calculate the error locator polynomial from the 
-    error_loc = find_errata_locator(c_pos);
+    error_loc = find_error_locator(c_pos);
 
     //Reverse the syndromes polynomial much like the error positions one
     rsynd = new_poly();

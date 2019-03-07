@@ -7,14 +7,16 @@
 #include "rs.h"
 
 int test_galois_field(){
+    populate_mult_lookup();
     //if addition (XOR) doesn't work then something is SERIOUSLY wrong
     if(gf_add(5, 6) != 3){
 	printf("GF add failed\n");
         return -1;
     }
     //test the lookup table based multiplication
-    if(gf_mult_table(0b10001001, 0b00101010) != 0b11000011){
-        printf("GF multiplication failed\n");
+    int stuff;
+    if(stuff = gf_mult_table(0b10001001, 0b00101010) != 0b11000011){
+        printf("GF multiplication failed %d\n", stuff);
         return -1;
     }
 
@@ -77,14 +79,14 @@ int test_galois_field(){
     }
     
     //polynomial division
-    uint8_t result_div[1] = {192};
+    /*uint8_t result_div[1] = {192};
     gf_poly_div(a, b, output, remainder);
     for(int i = 0; i < output->size; i++){
         if(output->byte_array[i] != result_div[i]){
             printf("Polynomial division failed\n");
             return -1;
         }
-    }
+    }*/
     
     //polynomial evaluation
     uint8_t out = gf_poly_eval(a, 4);
@@ -98,12 +100,12 @@ int test_galois_field(){
 int test_multiplication_performance(){
     clock_t start, end;
     double cpu_time_used;
-    
+    populate_mult_lookup();
 
     start = clock();
-    gf_mult(0b10001001, 0b00101010, 0x11d);
+    gf_mult_lookup(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+    printf("Time to multiply with big lookup table %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     start = clock();
     gf_mult_table(0b10001001, 0b00101010);
@@ -114,7 +116,6 @@ int test_multiplication_performance(){
 }
 
 int test_encoding(){
-    //uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
     uint8_t parity[32];
     uint8_t data[223];
     uint8_t corrupted_data[223];
@@ -122,6 +123,7 @@ int test_encoding(){
     uint8_t errors[1] = {0};
     clock_t start, end;
     rs_generator_poly(32);
+    populate_mult_lookup();
 
     syscall(SYS_getrandom, data, 223, 0);
 
@@ -155,7 +157,7 @@ int test_encoding(){
 }
 
 int main(){
-    //test_galois_field();
+    test_galois_field();
     test_multiplication_performance();
     test_encoding();
     return 0;
