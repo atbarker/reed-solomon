@@ -424,8 +424,6 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
     }
 
     corrected = new_poly();
-    //corrected->size = message->size;
-
     gf_poly_add(message, mag, corrected);
     /*free_poly(c_pos);
     free_poly(error_loc);
