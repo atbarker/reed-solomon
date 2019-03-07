@@ -266,14 +266,17 @@ void rs_generator_poly(uint8_t n_symbols){
 }
 
 //input and output buffers are assumed to be populated
-void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length){
+int encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length){
     Polynomial *output;
     int i, j;
     //temporary variable for encoding
     uint8_t coef = 0;
 
     //make sure we are in our block size limit for GF(2^8)
-    //assert(data_length + parity_length < 256);
+    if (data_length + parity_length < 256){
+        printk(KERN_INFO "invalid data and parity sizes\n");
+	return -1;
+    }
     output = new_poly();
     output->size = parity_length + data_length;
     memcpy(output->byte_array, data, data_length);
@@ -290,6 +293,7 @@ void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_
 
     //free_poly(input);
     //free_poly(output);
+    return 0;
 }
 
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){

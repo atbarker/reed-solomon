@@ -78,7 +78,7 @@ void rs_init(uint8_t parity_symbols);
 void rs_generator_poly(uint8_t n_symbols);
 
 //make sure that the two arrays are already allocated
-void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
+int encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
 
 //calculate the error syndromes
 Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length);
