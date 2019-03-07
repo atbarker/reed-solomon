@@ -7,7 +7,6 @@
 #include "rs.h"
 
 int test_galois_field(){
-    populate_mult_lookup();
     //if addition (XOR) doesn't work then something is SERIOUSLY wrong
     if(gf_add(5, 6) != 3){
 	printf("GF add failed\n");
@@ -100,17 +99,16 @@ int test_galois_field(){
 int test_multiplication_performance(){
     clock_t start, end;
     double cpu_time_used;
-    populate_mult_lookup();
 
     start = clock();
     gf_mult_lookup(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply with big lookup table %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+    printf("Time to multiply with gf_exp and gf_log lookup tables: %f seconds\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     start = clock();
     gf_mult_table(0b10001001, 0b00101010);
     end = clock();
-    printf("Time to multiply with lookup tables %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+    printf("Time to multiply with big lookup table: %f seconds\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     return 0;
 }
@@ -122,28 +120,22 @@ int test_encoding(){
     uint8_t output[255];
     uint8_t errors[1] = {0};
     clock_t start, end;
-    rs_generator_poly(32);
-    populate_mult_lookup();
 
     syscall(SYS_getrandom, data, 223, 0);
 
     start = clock();
-    for(int i = 0; i < 134; i++){
-        encode(data, 223, parity, 32);
-    }
+    encode(data, 223, parity, 32);
     end = clock();
-    printf("Time to encode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+    printf("Time to encode: %f seconds\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     //corrupt data 
     memcpy(corrupted_data, data, 223);
     corrupted_data[0] = 0;
 
     start = clock();
-    for(int i = 0; i < 134; i++){
-        decode(corrupted_data, parity, 223, 32, output, errors, 1);
-    }
+    decode(corrupted_data, parity, 223, 32, output, errors, 1);
     end = clock();
-    printf("Time to decode %f\n", ((double) (end - start))/CLOCKS_PER_SEC);
+    printf("Time to decode: %f seconds\n", ((double) (end - start))/CLOCKS_PER_SEC);
 
     for(int i = 0; i < 223; i++){
         if(output[i] != data[i]){
@@ -157,6 +149,7 @@ int test_encoding(){
 }
 
 int main(){
+    rs_init(32);
     test_galois_field();
     test_multiplication_performance();
     test_encoding();
