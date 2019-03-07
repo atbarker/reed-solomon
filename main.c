@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
-#include <sys/random.h>
+#include <unistd.h>
+#include <syscall.h>
 #include "rs.h"
 
 int test_galois_field(){
@@ -112,12 +113,15 @@ int test_multiplication_performance(){
 }
 
 int test_encoding(){
-    uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
-    uint8_t parity[10];
+    //uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
+    uint8_t parity[32];
+    uint8_t data[223];
     uint8_t output[26];
     uint8_t errors[1] = {0};
     clock_t start, end;
-    rs_generator_poly(10);
+    rs_generator_poly(32);
+
+    syscall(SYS_getrandom, data, 223, 0);
 
     for(int i = 0; i < 16; i++){
         printf("%d, ", data[i]);
