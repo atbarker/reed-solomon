@@ -1,7 +1,17 @@
-All:
-	gcc -g -c polynomial.c
-	gcc -g -c rs.c
-	gcc -g -c main.c
-	gcc -g -o main main.o rs.o polynomial.o
+PWD := $(shell pwd)
+
+ccflags-y += -I$(src)/include/
+
+RStest-objs := main.o rs.o polynomial.o
+obj-m += RStest.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+test:
+	sudo insmod RStest.ko
+	sleep 3
+	sudo rmmod RStest.ko
+
 clean:
-	rm *.o main
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
