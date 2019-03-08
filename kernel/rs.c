@@ -319,7 +319,7 @@ int encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_l
     uint8_t coef = 0;
 
     //make sure we are in our block size limit for GF(2^8)
-    if (data_length + parity_length < 256){
+    if (data_length + parity_length >= 256){
         printk(KERN_INFO "invalid data and parity sizes\n");
 	return -1;
     }
