@@ -22,8 +22,12 @@ static int __init km_template_init(void){
     printk(KERN_INFO "Inserting kernel module\n");
 
     get_random_bytes(data, 223);
+    print_hex_dump(KERN_DEBUG, "encoding:", DUMP_PREFIX_OFFSET, 20, 1, (void*)data, 223, true);
+    print_hex_dump(KERN_DEBUG, "parity:", DUMP_PREFIX_OFFSET, 20, 1, (void*)parity, 32, true);
     
     rs_init(32);
+
+    memset(output, 0, 255);
 
     encode(data, 223, parity, 32);
 
@@ -31,6 +35,7 @@ static int __init km_template_init(void){
     corrupted_data[0] = 0;
 
     decode(corrupted_data, parity, 223, 32, output, errors, 1);
+    print_hex_dump(KERN_DEBUG, "decoded:", DUMP_PREFIX_OFFSET, 20, 1, (void*)corrupted_data, 223, true);
 
     for(i = 0; i < 223; i++){
         if(output[i] != data[i]){
