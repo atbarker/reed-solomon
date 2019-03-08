@@ -11,33 +11,47 @@
 MODULE_LICENSE("MIT");
 MODULE_AUTHOR("AUSTEN BARKER");
 
+#define DATA_SIZE 223
+#define PARITY_SIZE 32
+
 static int __init km_template_init(void){
-    uint8_t parity[10];
-    uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
-    uint8_t corrupted_data[16];
-    uint8_t output[26];
+    uint8_t parity[PARITY_SIZE];
+    uint8_t data[DATA_SIZE];
+    //uint8_t data[16] = {0x40, 0xd2, 0x75, 0x47, 0x76, 0x17, 0x32, 0x06, 0x27, 0x26, 0x96, 0xc6, 0xc6, 0x96, 0x70, 0xec};
+    uint8_t corrupted_data[DATA_SIZE];
+    uint8_t output[DATA_SIZE + PARITY_SIZE];
     uint8_t errors[1] = {0};
     int i;
+    struct timespec timespec1, timespec2;
 
     printk(KERN_INFO "Inserting kernel module\n");
 
-    //get_random_bytes(data, 223);
-    print_hex_dump(KERN_DEBUG, "encoding:", DUMP_PREFIX_OFFSET, 20, 1, (void*)data, 16, true);
-    print_hex_dump(KERN_DEBUG, "parity:", DUMP_PREFIX_OFFSET, 20, 1, (void*)parity, 10, true);
+    get_random_bytes(data, DATA_SIZE);
+    //print_hex_dump(KERN_DEBUG, "encoding:", DUMP_PREFIX_OFFSET, 20, 1, (void*)data, DATA_SIZE, true);
+    //print_hex_dump(KERN_DEBUG, "parity:", DUMP_PREFIX_OFFSET, 20, 1, (void*)parity, PARITY_SIZE, true);
     
-    rs_init(10);
+    rs_init(PARITY_SIZE);
 
-    memset(output, 0, 26);
+    memset(output, 0, DATA_SIZE + PARITY_SIZE);
 
-    encode(data, 16, parity, 10);
+    getnstimeofday(&timespec1);
+    encode(data, DATA_SIZE, parity, PARITY_SIZE);
+    getnstimeofday(&timespec2);
+    printk(KERN_INFO "\n Encode took: %ld nanoseconds",
+(timespec2.tv_sec - timespec1.tv_sec) * 1000000000 + (timespec2.tv_nsec - timespec1.tv_nsec));
 
-    memcpy(corrupted_data, data, 16);
+    memcpy(corrupted_data, data, DATA_SIZE);
     corrupted_data[0] = 0;
 
-    decode(corrupted_data, parity, 16, 10, output, errors, 1);
-    print_hex_dump(KERN_DEBUG, "decoded:", DUMP_PREFIX_OFFSET, 20, 1, (void*)output, 26, true);
+    getnstimeofday(&timespec1);
+    decode(corrupted_data, parity, DATA_SIZE, PARITY_SIZE, output, errors, 1);
+    getnstimeofday(&timespec2);
+    printk(KERN_INFO "\n Decode took: %ld nanoseconds",
+(timespec2.tv_sec - timespec1.tv_sec) * 1000000000 + (timespec2.tv_nsec - timespec1.tv_nsec));
 
-    for(i = 0; i < 16; i++){
+    print_hex_dump(KERN_DEBUG, "decoded:", DUMP_PREFIX_OFFSET, 20, 1, (void*)output, DATA_SIZE + PARITY_SIZE, true);
+
+    for(i = 0; i < DATA_SIZE; i++){
         if(output[i] != data[i]){
             printk(KERN_INFO "Decode failed at character %d\n", i);
 	    goto exit;
