@@ -1,6 +1,6 @@
 PWD := $(shell pwd)
 
-ccflags-y += -I$(src)/include/
+ccflags-y += -I$(src)/include/ -O3
 
 RStest-objs := main.o rs.o
 obj-m += RStest.o
