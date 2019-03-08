@@ -35,7 +35,7 @@ static int __init km_template_init(void){
     corrupted_data[0] = 0;
 
     decode(corrupted_data, parity, 16, 10, output, errors, 1);
-    print_hex_dump(KERN_DEBUG, "decoded:", DUMP_PREFIX_OFFSET, 20, 1, (void*)corrupted_data, 16, true);
+    print_hex_dump(KERN_DEBUG, "decoded:", DUMP_PREFIX_OFFSET, 20, 1, (void*)output, 26, true);
 
     for(i = 0; i < 16; i++){
         if(output[i] != data[i]){

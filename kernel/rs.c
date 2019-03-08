@@ -305,7 +305,6 @@ Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     syndromes->byte_array[0] = 0;
     for(i = 1; i < parity_length+1; i++){
         syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i-1));
-        print_polynomial(syndromes);
     }
     return syndromes;
 }
@@ -339,7 +338,6 @@ Polynomial* find_error_locator(Polynomial *error_positions){
     //free_poly(mulp);
     //free_poly(apol);
     //free_poly(temp);
-    print_polynomial(error_loc);
     return error_loc;
 }
 
@@ -358,7 +356,6 @@ Polynomial* find_error_evaluator(Polynomial* syndrome, Polynomial* error_loc, ui
     gf_poly_div(mulp, divisor, output, evaluator);
     //free_poly(mulp);
     //free_poly(divisor);
-    print_polynomial(evaluator);
     return evaluator;
 }
 
@@ -400,7 +397,6 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
         l = 255 - c_pos->byte_array[i];
 	append(X, gf_pow(2, -l));
     }
-    print_polynomial(X);
 
 
     //initialize the magnitude polynomial and the err_loc_prime placeholder
@@ -428,8 +424,6 @@ Polynomial* correct_errors(Polynomial* syndromes, Polynomial* err_pos, Polynomia
 	mag->byte_array[err_pos->byte_array[i]] = gf_div(y, err_loc_p);
     }
 
-    print_polynomial(mag);
-
     corrected = new_poly();
     gf_poly_add(message, mag, corrected);
     /*free_poly(c_pos);
@@ -449,7 +443,6 @@ int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t
     Polynomial *error_pos = new_poly();
     Polynomial *syndromes;
 
-    print_polynomial(gen_poly);
 
     input_message->size = data_size + parity_size;
     decoded->size = input_message->size;
@@ -461,7 +454,6 @@ int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t
     set(error_pos, erasure_pos, erasure_count); 
 
     syndromes = calc_syndromes(input_message, parity_size);
-    print_polynomial(syndromes);
 
     decoded = correct_errors(syndromes, error_pos, input_message);
 
