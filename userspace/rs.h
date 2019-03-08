@@ -12,7 +12,7 @@ uint8_t init_tables(void);
 uint8_t gf_add(uint8_t x, uint8_t y);
 uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly);
 uint8_t gf_mult_table(uint8_t x, uint8_t y);
-void populate_mult_lookup(void);
+static void populate_mult_lookup(void);
 uint8_t gf_mult_lookup(uint8_t x, uint8_t y);
 uint8_t gf_div(int x, int y);
 uint8_t gf_pow(int x, int pow);
@@ -31,7 +31,7 @@ uint8_t gf_poly_eval(Polynomial *p, uint8_t x);
 void rs_init(uint8_t parity_symbols);
 
 //generate the reed-solomon generator polynomial
-void rs_generator_poly(uint8_t n_symbols);
+static void rs_generator_poly(uint8_t n_symbols);
 
 //make sure that the two arrays are already allocated
 void encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
