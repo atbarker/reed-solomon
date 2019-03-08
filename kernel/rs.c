@@ -21,6 +21,7 @@ Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array){
 Polynomial* new_poly(){
     Polynomial *p = kmalloc(sizeof(Polynomial), GFP_KERNEL);
     p->byte_array = kmalloc(256, GFP_KERNEL);
+    memset(p->byte_array, 0, 256);
     p->size = 0;
     p->array_length = 256;
     return p;
@@ -304,6 +305,7 @@ Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length){
     syndromes->byte_array[0] = 0;
     for(i = 1; i < parity_length+1; i++){
         syndromes->byte_array[i] = gf_poly_eval(message, gf_pow(2, i-1));
+        print_polynomial(syndromes);
     }
     return syndromes;
 }
