@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "polynomial.h"
 
+
 Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array){
     Polynomial *p = malloc(sizeof(Polynomial));
     p->size = size;
@@ -14,9 +15,10 @@ Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array){
 
 Polynomial* new_poly(){
     Polynomial *p = malloc(sizeof(Polynomial));
-    p->byte_array = malloc(256);
+    p->byte_array = malloc(GF_SIZE);
     p->size = 0;
-    p->array_length = 256;
+    p->array_length = GF_SIZE;
+    memset(p->byte_array, 0, GF_SIZE);
     return p;
 }
 

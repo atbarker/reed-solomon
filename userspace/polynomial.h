@@ -7,6 +7,7 @@
 
 //get a maximum value for calculating lengths
 #define poly_max(a, b) ((a > b) ? (a) : (b))
+#define GF_SIZE 256
 
 typedef struct{
     int size; //size of the polynomial
