@@ -22,6 +22,8 @@ static int __init km_template_init(void){
     printk(KERN_INFO "Inserting kernel module\n");
 
     get_random_bytes(data, 223);
+    
+    rs_init(32);
 
     encode(data, 223, parity, 32);
 
