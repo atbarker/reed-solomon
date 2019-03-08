@@ -10,7 +10,6 @@ all:
 
 test:
 	sudo insmod RStest.ko
-	sleep 3
 	sudo rmmod RStest.ko
 
 clean:
