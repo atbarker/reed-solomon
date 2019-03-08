@@ -5,6 +5,9 @@
 
 #define poly_max(a, b) ((a > b) ? (a) : (b))
 
+#define GF_SIZE 256
+#define MAX_VALUE 255
+
 typedef struct{
     int size; //size of the polynomial
     int array_length; //length of the byte array
